@@ -1,0 +1,12 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation 'com.github.jnr:jnr-ffi:2.1.9'
+}
+
+repositories {
+    jcenter()
+}
+
