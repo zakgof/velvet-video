@@ -3,8 +3,10 @@ package com.zakgof.velvetvideo;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
+import jnr.ffi.annotations.Delegate;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
+import jnr.ffi.byref.PointerByReference;
 import jnr.ffi.util.EnumMapper.IntegerEnum;
 
 class FFMpegNative {
@@ -51,6 +53,36 @@ class FFMpegNative {
         int av_dict_set(Pointer[] pm, String key, String value, int flags);
 
         int av_strerror(int errnum, Pointer errbuf, int errbuf_size);
+        
+        int av_log_set_level(int val);
+    }
+
+    public interface LibAVFormat {
+        int avformat_alloc_output_context2(@Out PointerByReference ctx, AVOutputFormat oformat, String format_name, String filename);
+        AVStream avformat_new_stream(AVFormatContext ctx, @In AVCodec codec);
+        int avformat_write_header(AVFormatContext ctx, Pointer[] dictionary);
+        
+        AVOutputFormat av_guess_format(String short_name, String filename, String mime_type);
+        
+        int av_write_frame(AVFormatContext context, AVPacket packet);
+        int av_interleaved_write_frame(AVFormatContext ctx, AVPacket packet);
+        
+        AVIOContext avio_alloc_context(Pointer buffer, int buffer_size, int write_flag, Pointer opaque,
+                                       IPacketIO reader,
+                                       IPacketIO writer,
+                                       ISeeker seeker);
+        
+        interface IPacketIO {
+            @Delegate int read_packet(Pointer opaque, Pointer buf, int buf_size);
+        }
+
+        interface ISeeker {
+            @Delegate int seek (Pointer opaque, int offset, int whence);
+        }
+
+        void av_dump_format(AVFormatContext context, int i, String string, int j);
+        
+        int avio_open(PointerByReference pbref, String url, int flags);
     }
 
     public static class AVDictionary extends Struct {
@@ -208,6 +240,58 @@ class FFMpegNative {
     public static class SwsContext extends Struct {
 
         public SwsContext(Runtime runtime) {
+            super(runtime);
+        }
+    }
+    
+    public static class AVFormatContext extends Struct {
+
+        public AVFormatContext(Runtime runtime) {
+            super(runtime);
+        }
+        
+        Pointer av_class = new Pointer();
+        Pointer iformat = new Pointer();
+        StructRef<AVOutputFormat> oformat = new StructRef<>(AVOutputFormat.class);
+        Pointer priv_data = new Pointer();
+
+        /**
+         * I/O context.
+         *
+         * - demuxing: either set by the user before avformat_open_input() (then
+         *             the user must close it manually) or set by avformat_open_input().
+         * - muxing: set by the user before avformat_write_header(). The caller must
+         *           take care of closing / freeing the IO context.
+         *
+         * Do NOT set this field if AVFMT_NOFILE flag is set in
+         * iformat/oformat.flags. In such a case, the (de)muxer will handle
+         * I/O in some other way and this field will be NULL.
+         */
+        Struct.StructRef<AVIOContext> pb = new StructRef<>(AVIOContext.class);
+        Signed32 ctx_flags = new Signed32();
+
+    }
+
+    public static class AVOutputFormat extends Struct {
+        public AVOutputFormat(Runtime runtime) {
+            super(runtime);
+        }
+        
+        public Struct.String name = new AsciiStringRef();
+        public Struct.String long_name = new AsciiStringRef();
+        public Struct.String mime = new AsciiStringRef();
+        public Struct.String extensions = new AsciiStringRef();
+     
+    }
+    
+    public static class AVIOContext extends Struct {
+        public AVIOContext(Runtime runtime) {
+            super(runtime);
+        }
+    }
+
+    public static class AVStream extends Struct {
+        public AVStream(Runtime runtime) {
             super(runtime);
         }
     }
