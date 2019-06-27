@@ -42,6 +42,15 @@ class FFMpegNative {
         int avcodec_encode_video2(AVCodecContext context, AVPacket packet, @In AVFrame frame, @Out int[] got_output);
 
         void av_free_packet(AVPacket packet);
+        
+        int avcodec_parameters_from_context(Pointer par, @In AVCodecContext codec);
+        
+        int avcodec_parameters_to_context(@Out AVCodecContext codec, Pointer par);
+        
+        Pointer avcodec_parameters_alloc();
+        
+        void avcodec_parameters_free(PointerByReference par);
+                                       
 
     }
 
@@ -97,9 +106,9 @@ class FFMpegNative {
             super(runtime);
         }
 
-        Pointer buf = new Pointer();
-        int64_t pts = new int64_t();
-        int64_t dts = new int64_t();
+        public Pointer buf = new Pointer();
+        public int64_t pts = new int64_t();
+        public int64_t dts = new int64_t();
 
         public Pointer data = new Pointer();
         public Signed32 size = new Signed32();
@@ -117,40 +126,40 @@ class FFMpegNative {
         // Signed32 height = new Signed32();
         // AVPixelFormat pix_fmt = AVPixelFormat.AV_PIX_FMT_YUV420P;
 
-        Struct.Pointer av_class = new Pointer(); // const AVClass *av_class;
-        Signed32 log_level_offset = new Signed32();
-        Unsigned16 codec_type = new Unsigned16();
-        Struct.Pointer codec = new Pointer();
-        Unsigned8 codec_id = new Unsigned8();
-        Unsigned32 codec_tag = new Unsigned32();
-        Struct.Pointer priv_data = new Pointer();
-        Struct.Pointer internal = new Pointer();
-        Struct.Pointer opaque = new Pointer();
-        int64_t bit_rate = new int64_t();
-        Signed32 bit_rate_tolerance = new Signed32();
-        Signed32 global_quality = new Signed32();
-        Signed32 compression_level = new Signed32();
-        Signed32 flags = new Signed32();
-        Signed32 flags2 = new Signed32();
-        Struct.Pointer extradata = new Pointer();
-        Signed32 extradata_size = new Signed32();
-        AVRational time_base = inner(new AVRational(getRuntime()));
-        Signed32 ticks_per_frame = new Signed32();
-        Signed32 delay = new Signed32();
-        Signed32 width = new Signed32();
-        Signed32 height = new Signed32();
-        Signed32 coded_width = new Signed32();
-        Signed32 coded_height = new Signed32();
-        Signed32 gop_size = new Signed32();
-        Enum32<AVPixelFormat> pix_fmt = new Enum32<>(AVPixelFormat.class);
-        Signed32 max_b_frames = new Signed32();
+        public Struct.Pointer av_class = new Pointer(); // const AVClass *av_class;
+        public Signed32 log_level_offset = new Signed32();
+        public Unsigned16 codec_type = new Unsigned16();
+        public Struct.Pointer codec = new Pointer();
+        public Unsigned8 codec_id = new Unsigned8();
+        public Unsigned32 codec_tag = new Unsigned32();
+        public Struct.Pointer priv_data = new Pointer();
+        public Struct.Pointer internal = new Pointer();
+        public Struct.Pointer opaque = new Pointer();
+        public int64_t bit_rate = new int64_t();
+        public Signed32 bit_rate_tolerance = new Signed32();
+        public Signed32 global_quality = new Signed32();
+        public Signed32 compression_level = new Signed32();
+        public Signed32 flags = new Signed32();
+        public Signed32 flags2 = new Signed32();
+        public Struct.Pointer extradata = new Pointer();
+        public Signed32 extradata_size = new Signed32();
+        public AVRational time_base = inner(new AVRational(getRuntime()));
+        public Signed32 ticks_per_frame = new Signed32();
+        public Signed32 delay = new Signed32();
+        public Signed32 width = new Signed32();
+        public Signed32 height = new Signed32();
+        public Signed32 coded_width = new Signed32();
+        public Signed32 coded_height = new Signed32();
+        public Signed32 gop_size = new Signed32();
+        public Enum32<AVPixelFormat> pix_fmt = new Enum32<>(AVPixelFormat.class);
+        public Signed32 max_b_frames = new Signed32();
 
-        float b_quant_factor;
-        float b_quant_offset;
-        int has_b_frames;
-        float i_quant_factor;
-        float i_quant_offset;
-        float lumi_masking;
+        public float b_quant_factor;
+        public float b_quant_offset;
+        public int has_b_frames;
+        public float i_quant_factor;
+        public float i_quant_offset;
+        public float lumi_masking;
 
         //
         // enum AVMediaType codec_type; /* see AVMEDIA_TYPE_xxx */
@@ -294,6 +303,40 @@ class FFMpegNative {
         public AVStream(Runtime runtime) {
             super(runtime);
         }
+        
+        public Signed32 index = new Signed32();
+        public Signed32 id = new Signed32();
+        
+        public StructRef<AVCodecContext> codec = new StructRef<AVCodecContext>(AVCodecContext.class);
+//      
+//        public Pointer priv_data = new Pointer();
+//        public AVRational time_base = inner(new AVRational(getRuntime()));
+//
+//        public int64_t start_time = new int64_t();
+//        public int64_t duration = new int64_t();
+//        public int64_t nb_frames = new int64_t();
+//
+//        public int32_t disposition = new int32_t();
+//
+//        public int32_t discard = new int32_t();
+//
+//
+//        public AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
+//
+//        public Pointer metadata = new Pointer();
+//
+//        public AVRational avg_frame_rate = inner(new AVRational(getRuntime()));
+//
+//        public AVPacket attached_pic = inner(new AVPacket(getRuntime()));
+//
+//        public Pointer side_data = new Pointer();
+//        public int32_t            nb_side_data = new int32_t();
+//
+//        public int32_t event_flags = new int32_t();
+//
+//        public  AVRational r_frame_rate = inner(new AVRational(getRuntime()));
+//
+//       public Pointer codecpar = new Pointer();
     }
 
 }

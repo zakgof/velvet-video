@@ -19,6 +19,7 @@ import com.zakgof.velvetvideo.FFMpegNative.AVFrame;
 import com.zakgof.velvetvideo.FFMpegNative.AVOutputFormat;
 import com.zakgof.velvetvideo.FFMpegNative.AVPacket;
 import com.zakgof.velvetvideo.FFMpegNative.AVPixelFormat;
+import com.zakgof.velvetvideo.FFMpegNative.AVStream;
 import com.zakgof.velvetvideo.FFMpegNative.LibAVCodec;
 import com.zakgof.velvetvideo.FFMpegNative.LibAVFormat;
 import com.zakgof.velvetvideo.FFMpegNative.LibAVFormat.IPacketIO;
@@ -42,11 +43,13 @@ public class FFMpegVideoLib implements IVideoLib {
     
     private LibAVUtil libavutil;
     private LibSwScale libswscale;
+    private LibAVCodec libavcodec;
     
     
     public FFMpegVideoLib() {
         libavutil = LibraryLoader.create(LibAVUtil.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("avutil-56");
         libswscale = LibraryLoader.create(LibSwScale.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("swscale-5");
+        libavcodec = LibraryLoader.create(LibAVCodec.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("avcodec-58");
     }
 
     @Override
@@ -98,7 +101,7 @@ public class FFMpegVideoLib implements IVideoLib {
     private class EncoderImpl implements IEncoder {
 
         
-        private LibAVCodec libavcodec;
+        
         private AVPacket packet;
         private AVCodecContext avcontext;
         
@@ -114,7 +117,7 @@ public class FFMpegVideoLib implements IVideoLib {
                            int timebaseDen, Map<String, String> params) {
 
             this.output = output;
-            libavcodec = LibraryLoader.create(LibAVCodec.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("avcodec-58");
+            
             
 
             codec = libavcodec.avcodec_find_encoder_by_name(codecName);
@@ -366,8 +369,20 @@ public class FFMpegVideoLib implements IVideoLib {
                 // TODO
                 //if (oc->oformat->flags & AVFMT_GLOBALHEADER)
                 //    c->flags |= CODEC_FLAG_GLOBAL_HEADER;
-                // AVStream stream = libavformat.avformat_new_stream(context, encoder.codec);
-                //System.err.println(stream);
+                AVStream stream = libavformat.avformat_new_stream(context, encoder.codec);
+                
+                Pointer pars = libavcodec.avcodec_parameters_alloc();
+                int rr = libavcodec.avcodec_parameters_from_context(pars, encoder.avcontext);
+                
+                AVCodecContext avCodecContext = stream.codec.get();
+                libavcodec.avcodec_parameters_to_context(avCodecContext, pars);
+                
+                
+                
+//                Pointer pointer = stream.codecpar.get();
+//                stream.codecpar.set(pars);
+                
+                // System.err.println(stream);
             }
             
             libavformat.av_dump_format(context, 0, "C:\\pr\\auto.mp4", 1);
