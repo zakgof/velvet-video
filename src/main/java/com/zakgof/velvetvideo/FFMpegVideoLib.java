@@ -19,7 +19,6 @@ import com.zakgof.velvetvideo.FFMpegNative.AVFrame;
 import com.zakgof.velvetvideo.FFMpegNative.AVOutputFormat;
 import com.zakgof.velvetvideo.FFMpegNative.AVPacket;
 import com.zakgof.velvetvideo.FFMpegNative.AVPixelFormat;
-import com.zakgof.velvetvideo.FFMpegNative.AVStream;
 import com.zakgof.velvetvideo.FFMpegNative.LibAVCodec;
 import com.zakgof.velvetvideo.FFMpegNative.LibAVFormat;
 import com.zakgof.velvetvideo.FFMpegNative.LibAVFormat.IPacketIO;
@@ -331,7 +330,7 @@ public class FFMpegVideoLib implements IVideoLib {
             AVOutputFormat outputFmt = libavformat.av_guess_format(format, null, null);
 
             PointerByReference ctxptr = new PointerByReference();
-            int ret = libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, null, "C:\\pr\\auto.mp4");
+            int ret = libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, "mp4", "C:\\pr\\auto.mp4");
             
             AVFormatContext context = new AVFormatContext(NativeRuntime.getInstance());
             context.useMemory(ctxptr.getValue());
@@ -367,8 +366,8 @@ public class FFMpegVideoLib implements IVideoLib {
                 // TODO
                 //if (oc->oformat->flags & AVFMT_GLOBALHEADER)
                 //    c->flags |= CODEC_FLAG_GLOBAL_HEADER;
-                AVStream stream = libavformat.avformat_new_stream(context, encoder.codec);
-                System.err.println(stream);
+                // AVStream stream = libavformat.avformat_new_stream(context, encoder.codec);
+                //System.err.println(stream);
             }
             
             libavformat.av_dump_format(context, 0, "C:\\pr\\auto.mp4", 1);
