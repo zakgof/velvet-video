@@ -29,7 +29,6 @@ import com.zakgof.velvetvideo.FFMpegNative.LibSwScale;
 import com.zakgof.velvetvideo.FFMpegNative.SwsContext;
 import com.zakgof.velvetvideo.IVideoLib.IEncoder.IBuilder;
 
-import jnr.ffi.LibraryLoader;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
@@ -47,9 +46,9 @@ public class FFMpegVideoLib implements IVideoLib {
     
     
     public FFMpegVideoLib() {
-        libavutil = LibraryLoader.create(LibAVUtil.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("avutil-56");
-        libswscale = LibraryLoader.create(LibSwScale.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("swscale-5");
-        libavcodec = LibraryLoader.create(LibAVCodec.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("avcodec-58");
+        libavutil = JNRLoader.load(LibAVUtil.class, "avutil-56");
+        libswscale = JNRLoader.load(LibSwScale.class, "swscale-5");
+        libavcodec = JNRLoader.load(LibAVCodec.class, "avcodec-58");
     }
 
     @Override
@@ -313,17 +312,15 @@ public class FFMpegVideoLib implements IVideoLib {
     private class MuxerImpl implements IMuxer {
 
         private static final int AVFMT_FLAG_CUSTOM_IO =  0x0080; 
-        private LibAVFormat libavformat;
-        private Map<String, IEncoder> videoStreams = new LinkedHashMap<>();
-        private OutputStream output;
+        private final LibAVFormat libavformat;
+        private final Map<String, IEncoder> videoStreams = new LinkedHashMap<>();
+        private final OutputStream output;
 
         public MuxerImpl(String format, OutputStream output, Map<String, IEncoder.IBuilder> videoBuilders) {
             
-            libavutil.av_log_set_level(40);
-            
             this.output = output;
             System.err.println("Muxing");
-            libavformat = LibraryLoader.create(LibAVFormat.class).search("C:\\pr\\velvet-video\\src\\main\\resources\\").load("avformat-58");
+            this.libavformat = JNRLoader.load(LibAVFormat.class, "avformat-58");
             
             Pointer buffer = NativeRuntime.getInstance().getMemoryManager().allocateDirect(32768);
             

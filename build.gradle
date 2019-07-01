@@ -2,11 +2,24 @@ plugins {
     id 'java'
 }
 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 dependencies {
     implementation 'com.github.jnr:jnr-ffi:2.1.9'
+    implementation 'commons-io:commons-io:2.6'
 }
 
 repositories {
     jcenter()
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'com.zakgof.velvetvideo.Main2'
+    }
+    baseName = 'velvetvideo'
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
 
