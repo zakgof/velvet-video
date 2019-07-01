@@ -23,12 +23,12 @@ class FFMpegNative {
         AVCodec avcodec_find_encoder_by_name(String name);
 
         AVPacket av_packet_alloc();
+        void av_init_packet(AVPacket packet);
+        void av_packet_free(PointerByReference packet);
+        void av_packet_unref(AVPacket packet);
 
         int avcodec_receive_packet(AVCodecContext avcontext, AVPacket packet);
-
-        int avcodec_open2x();
-
-        void av_init_packet(@Out AVPacket packet);
+        int avcodec_open2x();        
 
         AVCodecContext avcodec_alloc_context3(AVCodec codec);
 
@@ -41,7 +41,8 @@ class FFMpegNative {
 
         int avcodec_encode_video2(AVCodecContext context, AVPacket packet, @In AVFrame frame, @Out int[] got_output);
 
-        void av_free_packet(AVPacket packet);
+        // void av_free_packet(AVPacket packet);
+        
         
         int avcodec_parameters_from_context(Pointer par, @In AVCodecContext codec);
         
@@ -70,6 +71,8 @@ class FFMpegNative {
         int avformat_alloc_output_context2(@Out PointerByReference ctx, AVOutputFormat oformat, String format_name, String filename);
         AVStream avformat_new_stream(AVFormatContext ctx, @In AVCodec codec);
         int avformat_write_header(AVFormatContext ctx, Pointer[] dictionary);
+        int av_write_trailer(AVFormatContext ctx);
+        void avformat_free_context(AVFormatContext ctx);
         
         AVOutputFormat av_guess_format(String short_name, String filename, String mime_type);
         
@@ -80,6 +83,8 @@ class FFMpegNative {
                                        IPacketIO reader,
                                        IPacketIO writer,
                                        ISeeker seeker);
+        
+        void avio_context_free(PointerByReference avioContext);
         
         interface IPacketIO {
             @Delegate int read_packet(Pointer opaque, Pointer buf, int buf_size);
@@ -112,6 +117,7 @@ class FFMpegNative {
 
         public Pointer data = new Pointer();
         public Signed32 size = new Signed32();
+        public Signed32 stream_index = new Signed32();
     }
 
     public static class AVCodecContext extends Struct {

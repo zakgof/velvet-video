@@ -4,7 +4,11 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -16,6 +20,7 @@ import com.zakgof.velvetvideo.FFMpegNative.AVCodec;
 import com.zakgof.velvetvideo.FFMpegNative.AVCodecContext;
 import com.zakgof.velvetvideo.FFMpegNative.AVFormatContext;
 import com.zakgof.velvetvideo.FFMpegNative.AVFrame;
+import com.zakgof.velvetvideo.FFMpegNative.AVIOContext;
 import com.zakgof.velvetvideo.FFMpegNative.AVOutputFormat;
 import com.zakgof.velvetvideo.FFMpegNative.AVPacket;
 import com.zakgof.velvetvideo.FFMpegNative.AVPixelFormat;
@@ -37,14 +42,30 @@ import jnr.ffi.provider.ParameterFlags;
 import jnr.ffi.provider.jffi.NativeRuntime;
 
 public class FFMpegVideoLib implements IVideoLib {
+    
+    private static final int AVERROR_EOF = -541478725;
+    private static final int AVERROR_EAGAIN = -11;
 
-    private Runtime runtime;
+    private final Runtime runtime = Runtime.getSystemRuntime();
     
-    private LibAVUtil libavutil;
-    private LibSwScale libswscale;
-    private LibAVCodec libavcodec;
+    private final LibAVUtil libavutil;
+    private final LibSwScale libswscale;
+    private final LibAVCodec libavcodec;
     
-    
+    private int checkcode(int code) {
+        if (code < 0) {
+            Pointer ptr = runtime.getMemoryManager().allocateDirect(512); // TODO !!!
+            libavutil.av_strerror(code, ptr, 512);
+            byte[] bts = new byte[512];
+            ptr.get(0, bts, 0, 512);
+            int len = 0;
+            for (int i=0; i<512; i++) if (bts[i] == 0) len = i;
+            String s = new String(bts, 0, len);
+            throw new VelvetVideoException("FFMPEG error " + code + " : "+ s);
+        }
+        return code;
+    }
+
     public FFMpegVideoLib() {
         libavutil = JNRLoader.load(LibAVUtil.class, "avutil-56");
         libswscale = JNRLoader.load(LibSwScale.class, "swscale-5");
@@ -86,20 +107,18 @@ public class FFMpegVideoLib implements IVideoLib {
             return this;
         }
 
+        private EncoderImpl build(IPacketStream stream) {
+            return new EncoderImpl(stream, codec, bitrate, timebaseNum, timebaseDen, params);      
+        }
+
         @Override
         public IEncoder build(OutputStream output) {
             return build(new OutputPacketStream(output));
-        }
-        
-        private EncoderImpl build(IPacketStream stream) {
-            return new EncoderImpl(stream, codec, bitrate, timebaseNum, timebaseDen, params);            
         }
 
     }
 
     private class EncoderImpl implements IEncoder {
-
-        
         
         private AVPacket packet;
         private AVCodecContext avcontext;
@@ -107,8 +126,7 @@ public class FFMpegVideoLib implements IVideoLib {
         private IPacketStream output;
         
 
-        private static final int AVERROR_EOF = -541478725;
-        private static final int AVERROR_EAGAIN = -11;
+
         private FrameHolder frameHolder;
         private AVCodec codec;
 
@@ -116,11 +134,8 @@ public class FFMpegVideoLib implements IVideoLib {
                            int timebaseDen, Map<String, String> params) {
 
             this.output = output;
-            
-            
 
             codec = libavcodec.avcodec_find_encoder_by_name(codecName);
-            runtime = codec.getRuntime();
             avcontext = libavcodec.avcodec_alloc_context3(codec);
 
             avcontext.bit_rate.set(bitrate);
@@ -141,7 +156,7 @@ public class FFMpegVideoLib implements IVideoLib {
             checkcode(libavcodec.avcodec_open2(avcontext, codec, opts));
             
 
-            packet = libavcodec.av_packet_alloc();
+            
         }
 
         @Override
@@ -158,10 +173,8 @@ public class FFMpegVideoLib implements IVideoLib {
 
             AVFrame frame = frameHolder.setPixels(image);
             frame.pts.set((int) pts);
-
-            libavcodec.av_init_packet(packet);
-            packet.data.set((Pointer) null);
-            packet.size.set(0);
+            
+            packet = libavcodec.av_packet_alloc();
 
             frame.extended_data.set(frame.data[0].getMemory());
             encodeFrame(libavcodec, avcontext, frame, packet);
@@ -173,16 +186,26 @@ public class FFMpegVideoLib implements IVideoLib {
             System.err.println("Send frame " + res);
         
             while (res >= 0) {
+                libavcodec.av_init_packet(packet);
+                packet.data.set((Pointer) null);
+                packet.size.set(0);
+
                 res = libavcodec.avcodec_receive_packet(avcontext, packet);
                 System.err.println("Recv packet " + res);
                 if (res == AVERROR_EAGAIN || res == AVERROR_EOF)
                     break;
-                checkcode(res);
-                System.err.println("OUTPUT " + packet.size.get() + " bytes");
+                // checkcode(res);
+                byte[] data = new byte[packet.size.get()];
+                packet.data.get().get(0, data, 0, data.length);
+                System.err.println("OUTPUT " + packet.size.get() + " bytes, PTS=" + packet.pts.get() + " DTS=" + packet.dts.get());
                 output.send(packet);
+                libavcodec.av_packet_unref(packet);
+                
+                
+                
             }
         
-            libavcodec.av_free_packet(packet);
+            // 
         }
 
         private class FrameHolder implements AutoCloseable {
@@ -260,20 +283,6 @@ public class FFMpegVideoLib implements IVideoLib {
 
         }
 
-        private int checkcode(int code) {
-            if (code < 0) {
-                Pointer ptr = runtime.getMemoryManager().allocate(256); // TODO !!!
-                libavutil.av_strerror(code, ptr, 256);
-                byte[] bts = new byte[256];
-                ptr.get(0, bts, 0, 256);
-                int len = 0;
-                for (int i=0; i<256; i++) if (bts[i] == 0) len = i;
-                String s = new String(bts, 0, len);
-                throw new VelvetVideoException("FFMPEG error " + code + " : "+ s);
-            }
-            return code;
-        }
-
     }
 
     @Override
@@ -303,8 +312,18 @@ public class FFMpegVideoLib implements IVideoLib {
         }
 
         @Override
-        public IMuxer build(OutputStream output) {
+        public IMuxer build(ISeekableOutput output) {
             return new MuxerImpl(format, output, videos);
+        }
+
+        @Override
+        public IMuxer build(File outputFile) {
+            try {
+                FileOutput output = new FileOutput(new FileOutputStream(outputFile));
+                return new MuxerImpl(format, output, videos);
+            } catch (FileNotFoundException e) {
+                throw new VelvetVideoException(e);
+            }
         }
         
     }
@@ -312,11 +331,16 @@ public class FFMpegVideoLib implements IVideoLib {
     private class MuxerImpl implements IMuxer {
 
         private static final int AVFMT_FLAG_CUSTOM_IO =  0x0080; 
+        private static final int AVFMT_GLOBALHEADER = 0x0040;
+        private static final int CODEC_FLAG_GLOBAL_HEADER  = 1 << 22;
+        
         private final LibAVFormat libavformat;
         private final Map<String, IEncoder> videoStreams = new LinkedHashMap<>();
-        private final OutputStream output;
+        private final ISeekableOutput output;
+        private AVFormatContext context;
+        private AVIOContext avioCtx;
 
-        public MuxerImpl(String format, OutputStream output, Map<String, IEncoder.IBuilder> videoBuilders) {
+        public MuxerImpl(String format, ISeekableOutput output, Map<String, IEncoder.IBuilder> videoBuilders) {
             
             this.output = output;
             System.err.println("Muxing");
@@ -325,22 +349,20 @@ public class FFMpegVideoLib implements IVideoLib {
             Pointer buffer = NativeRuntime.getInstance().getMemoryManager().allocateDirect(32768);
             
             IOCallback callback = new IOCallback();
-            // AVIOContext avioCtx = libavformat.avio_alloc_context(buffer, 32768, 1, null, callback, callback, callback);
+            avioCtx = libavformat.avio_alloc_context(buffer, 32768, 1, null, null, callback, callback);
             
             AVOutputFormat outputFmt = libavformat.av_guess_format(format, null, null);
 
             PointerByReference ctxptr = new PointerByReference();
-            int ret = libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, "mp4", "C:\\pr\\auto.mp4");
+            checkcode(libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, "mp4", null));
             
-            AVFormatContext context = new AVFormatContext(NativeRuntime.getInstance());
+            context = new AVFormatContext(NativeRuntime.getInstance());
             context.useMemory(ctxptr.getValue());
             Struct.getMemory(context, ParameterFlags.OUT);
 
-//            context.ctx_flags.get();
-//            context.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO);
-//            context.pb.set(avioCtx);
-            
-            AVOutputFormat format2 = context.oformat.get();
+            context.ctx_flags.get();
+            context.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO);
+            context.pb.set(avioCtx);
             
             
             for (Entry<String, IEncoder.IBuilder> entry : videoBuilders.entrySet()) {
@@ -349,13 +371,13 @@ public class FFMpegVideoLib implements IVideoLib {
 
                     @Override
                     public void send(AVPacket packet) {
-                        int res = libavformat.av_write_frame(context, packet);
+                        int res = checkcode(libavformat.av_write_frame(context, packet));
                         System.err.println("Submit packet " + res);
                     }
 
                     @Override
                     public void close() {
-                        int res = libavformat.av_write_frame(context, null);
+                        int res = checkcode(libavformat.av_write_frame(context, null));
                         System.err.println("Flush muxer " + res);
                     }
                     
@@ -364,8 +386,8 @@ public class FFMpegVideoLib implements IVideoLib {
                 EncoderImpl encoder = ((EncoderBuilderImpl)entry.getValue()).build(ps);
                 videoStreams.put(entry.getKey(), encoder);
                 // TODO
-                //if (oc->oformat->flags & AVFMT_GLOBALHEADER)
-                //    c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+                
+                context.ctx_flags.set(context.ctx_flags.get() | CODEC_FLAG_GLOBAL_HEADER);
                 AVStream stream = libavformat.avformat_new_stream(context, encoder.codec);
                 
                 Pointer pars = libavcodec.avcodec_parameters_alloc();
@@ -382,17 +404,13 @@ public class FFMpegVideoLib implements IVideoLib {
                 // System.err.println(stream);
             }
             
-            libavformat.av_dump_format(context, 0, "C:\\pr\\auto.mp4", 1);
+            libavformat.av_dump_format(context, 0, "C:\\pr\\1.mp4", 1);
             
-            PointerByReference pbref = new PointerByReference();
-            ret = libavformat.avio_open(pbref, "C:\\pr\\auto.mp4", 2);
-            context.pb.set(pbref.getValue());
+            // PointerByReference pbref = new PointerByReference();
+            // ret = libavformat.avio_open(pbref, "C:\\pr\\auto.mp4", 2);
+            // context.pb.set(pbref.getValue());
             
-            
-            
-            ret = libavformat.avformat_write_header(context, null);
-            
-            
+            checkcode(libavformat.avformat_write_header(context, null));
         }
 
         @Override
@@ -400,11 +418,10 @@ public class FFMpegVideoLib implements IVideoLib {
             for (IEncoder encoder : videoStreams.values()) {
                 encoder.close();
             }
-            try {
-                output.close();
-            } catch (IOException e) {
-                throw new VelvetVideoException(e);
-            }
+            checkcode(libavformat.av_write_trailer(context));
+            libavformat.avio_context_free(new PointerByReference(Struct.getMemory(avioCtx)));
+            libavformat.avformat_free_context(context);
+            output.close();
         }
 
         @Override
@@ -416,11 +433,17 @@ public class FFMpegVideoLib implements IVideoLib {
 
             @Override
             public int seek(Pointer opaque, int offset, int whence) {
+                System.err.println("Seek custom avio to " + offset);
+                output.seek(offset);
                 return 0;
             }
 
             @Override
             public int read_packet(Pointer opaque, Pointer buf, int buf_size) {
+                System.err.println("Writing to custom avio " + buf_size + " bytes");
+                byte[] bytes = new byte[buf_size];
+                buf.get(0, bytes, 0, buf_size);
+                output.write(bytes);
                 return 0;
             }
             
@@ -462,7 +485,12 @@ public class FFMpegVideoLib implements IVideoLib {
                 throw new VelvetVideoException(e);
             }
         }
-        
+    }
+
+    @Override
+    public IDecoder decoder(InputStream is) {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }
