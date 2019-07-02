@@ -351,10 +351,9 @@ public class FFMpegVideoLib implements IVideoLib {
             System.err.println("Muxing");
             this.libavformat = JNRLoader.load(LibAVFormat.class, "avformat-58");
             
-            Pointer buffer = NativeRuntime.getInstance().getMemoryManager().allocateDirect(32768);
             
-            IOCallback callback = new IOCallback();
-            avioCtx = libavformat.avio_alloc_context(buffer, 32768, 1, null, null, callback, callback);
+            
+            
             
             AVOutputFormat outputFmt = libavformat.av_guess_format(format, null, null);
 
@@ -365,9 +364,13 @@ public class FFMpegVideoLib implements IVideoLib {
             formatCtx.useMemory(ctxptr.getValue());
             Struct.getMemory(formatCtx, ParameterFlags.OUT);
 
-            //context.ctx_flags.get();
-            //context.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO);
-            //context.pb.set(avioCtx);
+            IOCallback callback = new IOCallback();
+            Pointer buffer = libavutil.av_malloc(32768); // NativeRuntime.getInstance().getMemoryManager().allocateDirect(32768);
+            
+            avioCtx = libavformat.avio_alloc_context(buffer, 32768, 1, buffer, callback, callback, callback);
+            int flagz = formatCtx.ctx_flags.get();
+            formatCtx.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO | flagz);
+            formatCtx.pb.set(avioCtx);
             
             IPacketStream ps = new IPacketStream() {
 
@@ -427,9 +430,9 @@ public class FFMpegVideoLib implements IVideoLib {
             
             // libavformat.av_dump_format(context, 0, "C:\\pr\\1.mp4", 1);
             
-            PointerByReference pbref = new PointerByReference();
-            libavformat.avio_open(pbref, "C:\\pr\\auto.mp4", 2);
-            formatCtx.pb.set(pbref.getValue());
+            // PointerByReference pbref = new PointerByReference();
+            // libavformat.avio_open(pbref, "C:\\pr\\auto.mp4", 2);
+            // formatCtx.pb.set(pbref.getValue());
             
             checkcode(libavformat.avformat_write_header(formatCtx, null));
             
