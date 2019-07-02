@@ -126,17 +126,11 @@ class FFMpegNative {
             super(runtime);
         }
 
-        // int64_t bit_rate = new int64_t();
-        // AVRational time_base = new AVRational(getRuntime());
-        // Signed32 width = new Signed32();
-        // Signed32 height = new Signed32();
-        // AVPixelFormat pix_fmt = AVPixelFormat.AV_PIX_FMT_YUV420P;
-
         public Struct.Pointer av_class = new Pointer(); // const AVClass *av_class;
         public Signed32 log_level_offset = new Signed32();
-        public Unsigned16 codec_type = new Unsigned16();
-        public Struct.Pointer codec = new Pointer();
-        public Unsigned8 codec_id = new Unsigned8();
+        public Signed32 codec_type = new Signed32();
+        public StructRef<AVCodec> codec = new StructRef<>(AVCodec.class);
+        public Signed32 codec_id = new Signed32();
         public Unsigned32 codec_tag = new Unsigned32();
         public Struct.Pointer priv_data = new Pointer();
         public Struct.Pointer internal = new Pointer();
@@ -192,6 +186,42 @@ class FFMpegNative {
         // enum AVPixelFormat pix_fmt;
 
     }
+    
+    public static class AVCodecParameters extends Struct {
+
+        public AVCodecParameters(Runtime runtime) {
+            super(runtime);
+        }
+
+        public Signed32 codec_type = new Signed32();
+        public Signed32 codec_id = new Signed32();
+        public int32_t codec_tag = new int32_t();
+        
+        public Struct.Pointer extradata = new Pointer();
+        public Signed32 extradata_size = new Signed32();
+        public Signed32 format = new Signed32();
+        public int64_t bit_rate = new int64_t();
+        public Signed32 bits_per_coded_sample = new Signed32();
+        public Signed32 bits_per_raw_sample = new Signed32();
+        
+        public Signed32 profile = new Signed32();
+        public Signed32 level = new Signed32();
+        public Signed32 width = new Signed32();
+        public Signed32 height = new Signed32();
+        
+        AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
+        Signed32 field_order = new Signed32();
+        Signed32 color_range = new Signed32();
+        Signed32 color_primaries = new Signed32();
+        Signed32 color_trc = new Signed32();
+        Signed32 color_space = new Signed32();
+        Signed32 chroma_location = new Signed32();
+
+        Signed32 video_delay = new Signed32();
+        u_int64_t channel_layout = new u_int64_t();
+        Signed32 channels = new Signed32();
+        Signed32 sample_rate = new Signed32();
+    };
 
     public static class AVCodec extends Struct {
 
@@ -208,6 +238,9 @@ class FFMpegNative {
          * Descriptive name for the codec, meant to be more human readable than name.
          */
         public Struct.String long_name = new UTF8StringRef();
+        
+        Signed32 type = new Signed32();
+        Signed32 id = new Signed32();
     }
 
     public static class AVRational extends Struct {
@@ -284,6 +317,7 @@ class FFMpegNative {
          */
         Struct.StructRef<AVIOContext> pb = new StructRef<>(AVIOContext.class);
         Signed32 ctx_flags = new Signed32();
+        Unsigned32 nb_streams = new Unsigned32();
 
     }
 
@@ -314,35 +348,35 @@ class FFMpegNative {
         public Signed32 id = new Signed32();
         
         public StructRef<AVCodecContext> codec = new StructRef<AVCodecContext>(AVCodecContext.class);
-//      
-//        public Pointer priv_data = new Pointer();
-//        public AVRational time_base = inner(new AVRational(getRuntime()));
-//
-//        public int64_t start_time = new int64_t();
-//        public int64_t duration = new int64_t();
-//        public int64_t nb_frames = new int64_t();
-//
-//        public int32_t disposition = new int32_t();
-//
-//        public int32_t discard = new int32_t();
-//
-//
-//        public AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
-//
-//        public Pointer metadata = new Pointer();
-//
-//        public AVRational avg_frame_rate = inner(new AVRational(getRuntime()));
-//
-//        public AVPacket attached_pic = inner(new AVPacket(getRuntime()));
-//
-//        public Pointer side_data = new Pointer();
-//        public int32_t            nb_side_data = new int32_t();
-//
-//        public int32_t event_flags = new int32_t();
-//
-//        public  AVRational r_frame_rate = inner(new AVRational(getRuntime()));
-//
-//       public Pointer codecpar = new Pointer();
+      
+        public Pointer priv_data = new Pointer();
+        public AVRational time_base = inner(new AVRational(getRuntime()));
+
+        public int64_t start_time = new int64_t();
+        public int64_t duration = new int64_t();
+        public int64_t nb_frames = new int64_t();
+
+        public int32_t disposition = new int32_t();
+
+        public int32_t discard = new int32_t();
+
+
+        public AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
+
+        public Pointer metadata = new Pointer();
+
+        public AVRational avg_frame_rate = inner(new AVRational(getRuntime()));
+
+        public AVPacket attached_pic = inner(new AVPacket(getRuntime()));
+
+        public Pointer side_data = new Pointer();
+        public int32_t            nb_side_data = new int32_t();
+
+        public int32_t event_flags = new int32_t();
+
+        public  AVRational r_frame_rate = inner(new AVRational(getRuntime()));
+
+       public Pointer codecpar = new Pointer();
     }
 
 }
