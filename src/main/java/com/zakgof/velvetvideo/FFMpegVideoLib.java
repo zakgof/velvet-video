@@ -45,6 +45,7 @@ public class FFMpegVideoLib implements IVideoLib {
     
     private static final int AVERROR_EOF = -541478725;
     private static final int AVERROR_EAGAIN = -11;
+    private static final long AVNOPTS_VALUE = -9223372036854775808L;
 
     private final Runtime runtime = Runtime.getSystemRuntime();
     
@@ -177,8 +178,9 @@ public class FFMpegVideoLib implements IVideoLib {
             }
 
             AVFrame frame = frameHolder.setPixels(image);
-            frame.pts.set((int) pts);
-            
+            if (pts >= 0) {
+                frame.pts.set((int) pts);
+            }
             packet = libavcodec.av_packet_alloc();
 
             frame.extended_data.set(frame.data[0].getMemory());
@@ -186,12 +188,12 @@ public class FFMpegVideoLib implements IVideoLib {
         }
 
         private void encodeFrame(AVFrame frame, AVPacket packet) {
-            if (frame != null) {
-                int cn = codecCtx.time_base.num.get();
-                int cd = codecCtx.time_base.den.get();
-                int newPts = (int) (frame.pts.get() * cn * containerTimeBaseDen / cd / containerTimeBaseNum);
-                frame.pts.set(newPts);
-            }
+//            if (frame != null) {
+//                int cn = codecCtx.time_base.num.get();
+//                int cd = codecCtx.time_base.den.get();
+//                int newPts = (int) (frame.pts.get() * cn * containerTimeBaseDen / cd / containerTimeBaseNum);
+//                frame.pts.set(newPts);
+//            }
             checkcode(libavcodec.avcodec_send_frame(codecCtx, frame));
             for (;;) {
                 libavcodec.av_init_packet(packet);
@@ -203,8 +205,9 @@ public class FFMpegVideoLib implements IVideoLib {
                 if (res == AVERROR_EAGAIN || res == AVERROR_EOF)
                     break;
                 checkcode(res);
-                byte[] data = new byte[packet.size.get()];
-                packet.data.get().get(0, data, 0, data.length);
+                
+                fixPacketPtsDts(packet);
+                
                 System.err.println("Encoded packet " + packet.size.get() + " bytes, PTS=" + packet.pts.get() + " DTS=" + packet.dts.get());
                 output.send(packet);
                 libavcodec.av_packet_unref(packet);
@@ -212,6 +215,25 @@ public class FFMpegVideoLib implements IVideoLib {
             }
         
             // 
+        }
+
+        private void fixPacketPtsDts(AVPacket packet) {
+            if (packet.pts.get() != AVNOPTS_VALUE) {
+                long cn = codecCtx.time_base.num.get();
+                long cd = codecCtx.time_base.den.get();
+                long oldPts = packet.pts.get();
+                long newPts = oldPts * cn * containerTimeBaseDen / cd / containerTimeBaseNum;
+                packet.pts.set(newPts);
+                
+                System.err.println("PTS : " + oldPts + " -> " + newPts);
+            }
+            if (packet.dts.get() != AVNOPTS_VALUE) {
+                long cn = codecCtx.time_base.num.get();
+                long cd = codecCtx.time_base.den.get();
+                long newDts = packet.dts.get() * cn * containerTimeBaseDen / cd / containerTimeBaseNum;
+                packet.dts.set(newDts);
+            }
+            
         }
 
         private class FrameHolder implements AutoCloseable {
@@ -389,14 +411,18 @@ public class FFMpegVideoLib implements IVideoLib {
             Map<String, AVStream> streams = new HashMap<>();
             for (Entry<String, IEncoder.IBuilder> entry : videoBuilders.entrySet()) {
                 
-//                // TODO
-//                // context.ctx_flags.set(context.ctx_flags.get() | CODEC_FLAG_GLOBAL_HEADER);
+//              
+                
                 
                 EncoderBuilderImpl builder = (EncoderBuilderImpl)entry.getValue();
                 AVCodec codec = libavcodec.avcodec_find_encoder_by_name(builder.codec);
                 AVStream stream = libavformat.avformat_new_stream(formatCtx, codec);
                 
                 AVCodecContext codecContext = stream.codec.get();
+                
+                if ((formatCtx.ctx_flags.get() & AVFMT_GLOBALHEADER) != 0) {
+                    codecContext.flags.set(codecContext.flags.get() | CODEC_FLAG_GLOBAL_HEADER);
+                }
                 
                 codecContext.codec_id.set(codec.id.get());
                 codecContext.codec_type.set(codec.type.get());
@@ -464,7 +490,7 @@ public class FFMpegVideoLib implements IVideoLib {
             @Override
             public int read_packet(Pointer opaque, Pointer buf, int buf_size) {
                 System.err.println("Writing to custom avio " + buf_size + " bytes");
-                byte[] bytes = new byte[buf_size];
+                byte[] bytes = new byte[buf_size]; // TODO perf: prealloc buffer
                 buf.get(0, bytes, 0, buf_size);
                 output.write(bytes);
                 return buf_size;
