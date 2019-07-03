@@ -53,6 +53,12 @@ class FFMpegNative {
         Pointer avcodec_parameters_alloc();
         
         void avcodec_parameters_free(PointerByReference par);
+        
+        int avcodec_receive_frame(AVCodecContext context, AVFrame frame);
+        
+        int avcodec_send_packet(AVCodecContext context, AVPacket packet);
+        
+        AVCodec avcodec_find_decoder(int id);
                                        
 
     }
@@ -90,6 +96,8 @@ class FFMpegNative {
         
         void avio_context_free(PointerByReference avioContext);
         
+        int avformat_open_input(PointerByReference ctx, String url, AVInputFormat fmt, Pointer[] options);
+        
         interface IPacketIO {
             @Delegate @StdCall int read_packet(Pointer opaque, Pointer buf, int buf_size);
         }
@@ -101,6 +109,18 @@ class FFMpegNative {
         void av_dump_format(AVFormatContext context, int i, String string, int j);
         
         int avio_open(PointerByReference pbref, String url, int flags);
+        
+        AVFormatContext avformat_alloc_context();
+        
+        int avformat_find_stream_info(AVFormatContext context, Pointer[] options);
+        
+        int av_find_best_stream(AVFormatContext context, int type, int wanted_stream_nb, int related_stream,
+                                Pointer[] decoder_ret,
+                                int flags);
+        
+        int av_read_frame(AVFormatContext contexxt, AVPacket pkt);
+        
+        
     }
 
     public static class AVDictionary extends Struct {
@@ -322,6 +342,7 @@ class FFMpegNative {
         Struct.StructRef<AVIOContext> pb = new StructRef<>(AVIOContext.class);
         Signed32 ctx_flags = new Signed32();
         Unsigned32 nb_streams = new Unsigned32();
+        Pointer streams = new Pointer();
 
     }
 
@@ -335,6 +356,15 @@ class FFMpegNative {
         public Struct.String mime = new AsciiStringRef();
         public Struct.String extensions = new AsciiStringRef();
      
+    }
+    
+    public static class AVInputFormat extends Struct {
+        public AVInputFormat(Runtime runtime) {
+            super(runtime);
+        }
+        
+        public Struct.String name = new AsciiStringRef();
+        public Struct.String long_name = new AsciiStringRef();     
     }
     
     public static class AVIOContext extends Struct {

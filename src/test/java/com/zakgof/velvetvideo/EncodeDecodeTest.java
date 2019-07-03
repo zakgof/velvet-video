@@ -12,7 +12,7 @@ import java.util.Random;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.zakgof.velvetvideo.IVideoLib.IDecoder;
+import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoLib.IEncoder;
 
@@ -26,7 +26,7 @@ public class EncodeDecodeTest {
         Path file = dir.resolve("stream");
 
         BufferedImage[] orig = new BufferedImage[5];
-        try (IEncoder encoder = lib.encoderBuilder("libx264")
+        try (IEncoder encoder = lib.encoder("libx264")
            .bitrate(400000)
            .build(new FileOutputStream(file.toFile(), false))) {
         
@@ -36,7 +36,7 @@ public class EncodeDecodeTest {
             }
         }
         try (FileInputStream fis = new FileInputStream(file.toFile()); 
-                IDecoder decoder = lib.decoder(fis)) {
+                IDemuxer decoder = lib.demuxer(fis)) {
             
             IDecoderVideoStream stream = decoder.videoStreams().get(0);
             for (int i=0; i<orig.length; i++) {

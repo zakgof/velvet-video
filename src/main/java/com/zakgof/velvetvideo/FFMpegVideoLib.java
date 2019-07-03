@@ -5,11 +5,13 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +45,14 @@ import jnr.ffi.byref.PointerByReference;
 
 public class FFMpegVideoLib implements IVideoLib {
     
+    private static final int AVIO_CUSTOM_BUFFER_SIZE = 32768;
+    private static final int AVFMT_FLAG_CUSTOM_IO =  0x0080; 
+    private static final int AVFMT_GLOBALHEADER = 0x0040;
+    private static final int CODEC_FLAG_GLOBAL_HEADER  = 1 << 22;
+    
+    private static final int AVMEDIA_TYPE_VIDEO = 0;
+    private static final int AVMEDIA_TYPE_AUDIO = 1;
+    
     private static final int AVERROR_EOF = -541478725;
     private static final int AVERROR_EAGAIN = -11;
     private static final long AVNOPTS_VALUE = -9223372036854775808L;
@@ -74,7 +84,7 @@ public class FFMpegVideoLib implements IVideoLib {
     }
 
     @Override
-    public IBuilder encoderBuilder(String codec) {
+    public IBuilder encoder(String codec) {
         return new EncoderBuilderImpl(codec);
     }
     
@@ -107,6 +117,72 @@ public class FFMpegVideoLib implements IVideoLib {
             libavutil.av_dict_set(opts, entry.getKey(), entry.getValue(), 0);
         }
         return opts;
+    }
+
+    private class FrameHolder implements AutoCloseable {
+    
+        private final AVFrame frame;
+        private final SwsContext scaleCtx;
+        private final int width;
+        private final int height;
+        private final Pointer rgbPtr;
+    
+        public FrameHolder(int width, int height, int originalImageType) {
+            this.width = width;
+            this.height = height;
+    
+            this.frame = libavutil.av_frame_alloc();
+            frame.width.set(width);
+            frame.height.set(height);
+            frame.pix_fmt.set(AVPixelFormat.AV_PIX_FMT_YUV420P); // TODO
+    
+            this.rgbPtr = frame.getRuntime().getMemoryManager().allocateDirect(width * height * 3);  // TODO
+    
+            AVPixelFormat srcFormat = avformatOf(originalImageType);
+            scaleCtx = libswscale.sws_getContext(width, height, srcFormat, width, height, AVPixelFormat.AV_PIX_FMT_YUV420P, 0, 0, 0, 0);
+    
+            Pointer[] dataptr = new Pointer[8]; // TODO: this is ugly
+            int[] linesizeptr = new int[8];
+            checkcode(libavutil.av_image_alloc(dataptr, linesizeptr, width, height, AVPixelFormat.AV_PIX_FMT_YUV420P, 32));
+            for (int i = 0; i < 8; i++) {
+                frame.data[i].set(dataptr[i]);
+                frame.linesize[i].set(linesizeptr[i]);
+            }
+        }
+    
+        public AVFrame setPixels(BufferedImage image) {
+            byte[] bytes = bytesOf(image);
+            rgbPtr.put(0, bytes, 0, bytes.length);
+    
+            int[] inStride = {3 * width}; // RGB stride
+            int[] outStride = { width, width / 2, width / 2 }; // YUV
+    
+            Pointer[] inData = new Pointer[] { rgbPtr }; // one plane
+            Pointer[] outData = new Pointer[] { frame.data[0].get(), frame.data[1].get(), frame.data[2].get() };
+            checkcode(libswscale.sws_scale(scaleCtx, inData, inStride, 0, height, outData, outStride));
+            return frame;
+        }
+        
+        public void close() {
+            // TODO: free frame and its buffers, scaleCtx
+        }
+    }
+
+    private AVPixelFormat avformatOf(int type) {
+        if (type == BufferedImage.TYPE_3BYTE_BGR) {
+            return AVPixelFormat.AV_PIX_FMT_BGR24;
+        } else {
+            throw new VelvetVideoException("Unsupported BufferedImage type, only TYPE_3BYTE_BGR supported at the moment");
+        }
+    }
+
+    private byte[] bytesOf(BufferedImage image) {
+        Raster raster = image.getData();
+        DataBuffer buffer = raster.getDataBuffer();
+        if (buffer instanceof DataBufferByte) {
+            return ((DataBufferByte) buffer).getData();
+        }
+        throw new VelvetVideoException("Unsupported image data buffer type");
     }
 
     private class EncoderBuilderImpl implements IBuilder {
@@ -170,6 +246,7 @@ public class FFMpegVideoLib implements IVideoLib {
             this.codecCtx = codecCtx;
             this.containerTimeBaseNum = containerTimeBaseNum;
             this.containerTimeBaseDen = containerTimeBaseDen;
+            this.packet = libavcodec.av_packet_alloc(); // TODO free
         }       
 
         @Override
@@ -188,7 +265,7 @@ public class FFMpegVideoLib implements IVideoLib {
             if (pts >= 0) {
                 frame.pts.set((int) pts);
             }
-            packet = libavcodec.av_packet_alloc();
+            
 
             frame.extended_data.set(frame.data[0].getMemory());
             encodeFrame(frame, packet);
@@ -230,72 +307,6 @@ public class FFMpegVideoLib implements IVideoLib {
             }
         }
 
-        private class FrameHolder implements AutoCloseable {
-
-            private final AVFrame frame;
-            private final SwsContext scaleCtx;
-            private final int width;
-            private final int height;
-            private final Pointer rgbPtr;
-
-            public FrameHolder(int width, int height, int originalImageType) {
-                this.width = width;
-                this.height = height;
-
-                this.frame = libavutil.av_frame_alloc();
-                frame.width.set(width);
-                frame.height.set(height);
-                frame.pix_fmt.set(AVPixelFormat.AV_PIX_FMT_YUV420P); // TODO
-
-                this.rgbPtr = frame.getRuntime().getMemoryManager().allocateDirect(width * height * 3);  // TODO
-
-                AVPixelFormat srcFormat = avformatOf(originalImageType);
-                scaleCtx = libswscale.sws_getContext(width, height, srcFormat, width, height, AVPixelFormat.AV_PIX_FMT_YUV420P, 0, 0, 0, 0);
-
-                Pointer[] dataptr = new Pointer[8]; // TODO: this is ugly
-                int[] linesizeptr = new int[8];
-                checkcode(libavutil.av_image_alloc(dataptr, linesizeptr, width, height, AVPixelFormat.AV_PIX_FMT_YUV420P, 32));
-                for (int i = 0; i < 8; i++) {
-                    frame.data[i].set(dataptr[i]);
-                    frame.linesize[i].set(linesizeptr[i]);
-                }
-            }
-
-            public AVFrame setPixels(BufferedImage image) {
-                byte[] bytes = bytesOf(image);
-                rgbPtr.put(0, bytes, 0, bytes.length);
-
-                int[] inStride = {3 * width}; // RGB stride
-                int[] outStride = { width, width / 2, width / 2 }; // YUV
-
-                Pointer[] inData = new Pointer[] { rgbPtr }; // one plane
-                Pointer[] outData = new Pointer[] { frame.data[0].get(), frame.data[1].get(), frame.data[2].get() };
-                checkcode(libswscale.sws_scale(scaleCtx, inData, inStride, 0, height, outData, outStride));
-                return frame;
-            }
-            
-            public void close() {
-                // TODO: free frame and its buffers, scaleCtx
-            }
-        }
-
-        private AVPixelFormat avformatOf(int type) {
-            if (type == BufferedImage.TYPE_3BYTE_BGR) {
-                return AVPixelFormat.AV_PIX_FMT_BGR24;
-            } else {
-                throw new VelvetVideoException("Unsupported BufferedImage type, only TYPE_3BYTE_BGR supported at the moment");
-            }
-        }
-
-        private byte[] bytesOf(BufferedImage image) {
-            Raster raster = image.getData();
-            DataBuffer buffer = raster.getDataBuffer();
-            if (buffer instanceof DataBufferByte) {
-                return ((DataBufferByte) buffer).getData();
-            }
-            throw new VelvetVideoException("Unsupported image data buffer type");
-        }
-
         @Override
         public void close() {
             // Flush
@@ -313,7 +324,7 @@ public class FFMpegVideoLib implements IVideoLib {
     }
 
     @Override
-    public IMuxer.IBuilder muxerBuilder(String format) {
+    public IMuxer.IBuilder muxer(String format) {
         return new MuxerBuilderImpl(format);
     }
 
@@ -351,10 +362,7 @@ public class FFMpegVideoLib implements IVideoLib {
 
     private class MuxerImpl implements IMuxer {
 
-        private static final int AVIO_CUSTOM_BUFFER_SIZE = 32768;
-        private static final int AVFMT_FLAG_CUSTOM_IO =  0x0080; 
-        private static final int AVFMT_GLOBALHEADER = 0x0040;
-        private static final int CODEC_FLAG_GLOBAL_HEADER  = 1 << 22;
+        
         
         private final LibAVFormat libavformat;
         private final Map<String, IEncoder> videoStreams;
@@ -500,9 +508,181 @@ public class FFMpegVideoLib implements IVideoLib {
     }
 
     @Override
-    public IDecoder decoder(InputStream is) {
-        // TODO Auto-generated method stub
-        return null;
+    public IDemuxer demuxer(InputStream is) {
+        return new DemuxerImpl((FileInputStream) is);
+    }
+    
+    private class DemuxerImpl implements IDemuxer {
+        
+        private final LibAVFormat libavformat;
+        private AVFormatContext formatCtx;
+        private ISeekableInput input;
+        private IOCallback callback;
+        private AVIOContext avioCtx;
+        private List<IDecoderVideoStream> streams = new ArrayList<>();
+
+        public DemuxerImpl(FileInputStream input) {
+            this.input = new FileInput(input);
+            this.libavformat = JNRHelper.load(LibAVFormat.class, "avformat-58");
+            
+            formatCtx = libavformat.avformat_alloc_context();
+            this.callback = new IOCallback();
+            Pointer buffer = libavutil.av_malloc(AVIO_CUSTOM_BUFFER_SIZE + 64); // TODO free buffer
+            avioCtx = libavformat.avio_alloc_context(buffer, AVIO_CUSTOM_BUFFER_SIZE, 0, null, callback, null, callback);
+            int flagz = formatCtx.ctx_flags.get();
+            formatCtx.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO | flagz);
+            formatCtx.pb.set(avioCtx);
+            
+            PointerByReference ptrctx = new PointerByReference(Struct.getMemory(formatCtx));
+            checkcode(libavformat.avformat_open_input(ptrctx, null, null, null));
+            
+            checkcode(libavformat.avformat_find_stream_info(formatCtx, null));
+            
+            long nb = formatCtx.nb_streams.get();
+            for (long i=0; i<nb; i++) {
+                AVStream avstream = JNRHelper.struct(AVStream.class, formatCtx.streams.get().getPointer(i /** TODO **/));
+                if (avstream.codec.get().codec_type.get() == AVMEDIA_TYPE_VIDEO) {
+                    streams.add(new DecoderVideoStreamImpl(avstream));
+                }
+            }
+            toString();
+        }
+        
+        private class DecoderVideoStreamImpl implements IDecoderVideoStream {
+
+            private AVStream avstream;
+            private AVCodecContext codecCtx;
+            private AVPacket packet;
+            private AVFrame frame;
+
+            public DecoderVideoStreamImpl(AVStream avstream) {
+                this.avstream = avstream;
+                this.codecCtx = avstream.codec.get();
+                
+                AVCodec codec = libavcodec.avcodec_find_decoder(codecCtx.codec_id.get());
+                checkcode(libavcodec.avcodec_open2(codecCtx, codec, null));
+                
+                
+                this.packet = libavcodec.av_packet_alloc(); // TODO free
+                this.frame = libavutil.av_frame_alloc();
+            }
+
+            @Override
+            public void close() {
+                // TODO Auto-generated method stub
+                
+            }
+
+            @Override
+            public BufferedImage nextFrame() {
+                // TODO: wrong API - should read audio or video or whatever comes
+
+                for (;;) {
+                    libavcodec.av_init_packet(packet);
+                    packet.data.set((Pointer) null);
+                    packet.size.set(0);
+
+                    checkcode(libavformat.av_read_frame(formatCtx, packet));
+
+                    int index = packet.stream_index.get(); // TODO !!!!!
+                    IDecoderVideoStream stream = streams.get(index);
+
+                    int res = libavcodec.avcodec_send_packet(codecCtx, packet);
+
+                    // TODO: get frame params
+                    if (res == AVERROR_EAGAIN)
+                        continue;
+                    if (res == AVERROR_EOF)
+                        return null;
+                    checkcode(res);
+                    
+                    res = libavcodec.avcodec_receive_frame(codecCtx, frame);
+                    if (res == AVERROR_EAGAIN)
+                        continue;
+                    if (res == AVERROR_EOF)
+                        return null;
+                    checkcode(res);
+                    break;
+                }
+                
+                return toImage(frame);
+            }
+            
+            public BufferedImage toImage(AVFrame frame) {
+                
+                int width = frame.width.get();
+                int height = frame.height.get();
+                
+                
+                int[] inStride = { width, width / 2, width / 2 }; // YUV  
+              int[] outStride = {3 * width}; // RGB stride
+              Pointer[] inData = new Pointer[] { frame.data[0].get(), frame.data[1].get(), frame.data[2].get() };
+              
+              Pointer rgbPtr = frame.getRuntime().getMemoryManager().allocateDirect(width * height * 3);
+              Pointer[] outData = new Pointer[] { rgbPtr};
+              
+              SwsContext scaleCtx = libswscale.sws_getContext(width, height, AVPixelFormat.AV_PIX_FMT_YUV420P, width, height, AVPixelFormat.AV_PIX_FMT_BGR24, 0, 0, 0, 0);       
+                
+              checkcode(libswscale.sws_scale(scaleCtx, inData, inStride, 0, height, outData, outStride));
+//            
+              BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+              byte[] data = ((DataBufferByte)bi.getRaster().getDataBuffer()).getData();
+              
+              rgbPtr.get(0, data, 0, data.length);
+              return bi;
+              
+            }
+            
+        }
+        
+        @Override
+        public List<IDecoderVideoStream> videoStreams() {
+            return streams;
+        }
+
+        @Override
+        public void close() {
+            // TODO Auto-generated method stub
+            
+        }
+        
+        public class IOCallback implements IPacketIO, ISeeker {
+
+            @Override
+            public int read_packet(Pointer opaque, Pointer buf, int buf_size) {
+                System.err.println("Reading from custom avio " + buf_size + " bytes");
+                byte[] bytes = new byte[buf_size];
+                int bts;
+                bts = input.read(bytes);
+                buf.put(0, bytes, 0, bts);
+                return bts;
+            }
+            
+            @Override
+            public int seek(Pointer opaque, int offset, int whence) {
+                
+                final int SEEK_SET = 0;   /* set file offset to offset */
+                final int SEEK_CUR = 1;   /* set file offset to current plus offset */
+                final int SEEK_END = 2;   /* set file offset to EOF plus offset */
+                final int AVSEEK_SIZE = 0x10000;   /* set file offset to EOF plus offset */
+                
+                
+                System.err.println("Seek custom avio to " + offset + "/" + whence); // TODO whence
+                // output.seek(offset);
+                if (whence == SEEK_SET)
+                    input.seek(offset);
+                else if (whence == SEEK_END)
+                    input.seek(input.size() - offset);
+                else if (whence == AVSEEK_SIZE) 
+                    return (int) input.size();
+                else throw new VelvetVideoException("Unsupported seek operation " + whence);
+                return offset;
+            }
+
+        }
+
+      
+        
     }
 
 }

@@ -2,6 +2,7 @@ package com.zakgof.velvetvideo;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,9 +15,9 @@ public interface IVideoLib {
 
     List<String> codecs();
 
-    IEncoder.IBuilder encoderBuilder(String format);
+    IEncoder.IBuilder encoder(String format);
 
-    IMuxer.IBuilder muxerBuilder(String format);
+    IMuxer.IBuilder muxer(String format);
 
     interface IEncoder extends AutoCloseable {
 
@@ -58,9 +59,9 @@ public interface IVideoLib {
 
     }
 
-    IDecoder decoder(InputStream is);
+    IDemuxer demuxer(InputStream is);
 
-    interface IDecoder extends AutoCloseable {
+    interface IDemuxer extends AutoCloseable {
         void close();
 
         List<IDecoderVideoStream> videoStreams();
@@ -115,6 +116,66 @@ public interface IVideoLib {
             try {
                 channel.close();
                 fos.close();
+            } catch (IOException e) {
+                throw new VelvetVideoException(e);
+            }
+        }
+        
+    }
+    
+    interface ISeekableInput extends AutoCloseable {
+        int read(byte[] bytes);
+        void seek(long position);
+        void close();
+        long size();
+    }
+    
+    public static class FileInput implements ISeekableInput {
+        
+        private SeekableByteChannel channel;
+        private FileInputStream fos;
+
+        public FileInput(SeekableByteChannel channel) {
+            
+        }
+
+        public FileInput(FileInputStream fis) {
+            this.fos = fis;
+            this.channel = fis.getChannel();
+        }
+
+        @Override
+        public int read(byte[] bytes) {
+            try {
+                return channel.read(ByteBuffer.wrap(bytes));
+            } catch (IOException e) {
+                throw new VelvetVideoException(e); 
+            }
+        }
+
+        @Override
+        public void seek(long position) {
+            try {
+                channel.position(position);
+            } catch (IOException e) {
+                throw new VelvetVideoException(e); 
+            }
+        }
+
+        @Override
+        public void close() {
+            try {
+                channel.close();
+                fos.close();
+            } catch (IOException e) {
+                throw new VelvetVideoException(e);
+            }
+        }
+
+        @Override
+        public long size() {
+            try {
+                return channel.size();
             } catch (IOException e) {
                 throw new VelvetVideoException(e);
             }

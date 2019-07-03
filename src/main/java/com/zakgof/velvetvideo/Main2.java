@@ -2,10 +2,12 @@ package com.zakgof.velvetvideo;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
+import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IMuxer;
 
 public class Main2 {
@@ -13,13 +15,21 @@ public class Main2 {
     public static void main(String[] args) throws IOException {
 
         IVideoLib lib = new FFMpegVideoLib();
+        
+        
+        IDemuxer demuxer = lib.demuxer(new FileInputStream("c:\\pr\\1.mp4"));
+        BufferedImage nextFrame = demuxer.videoStreams().get(0).nextFrame();
+        
+        ImageIO.write(nextFrame, "png", new File("c:\\pr\\1.png"));
+        
+        System.exit(4);
 
 //        IEncoder encoder = lib.encoderBuilder("libx264")
 //            .bitrate(400000)
 //            .build(new FileOutputStream("c:\\pr\\1.h264", false));
         
-        try (IMuxer muxer = lib.muxerBuilder("mp4")
-            .videoStream("video1", lib.encoderBuilder("libx264").bitrate(100000))
+        try (IMuxer muxer = lib.muxer("mp4")
+            .videoStream("video1", lib.encoder("libx264").bitrate(100000))
             .build(new File("c:\\pr\\1.mp4"))) {
 
             for (int i = 0; i < 300; i++) {
