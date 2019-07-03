@@ -3,6 +3,7 @@ package com.zakgof.velvetvideo;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -12,15 +13,19 @@ import org.apache.commons.io.FileUtils;
 
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Platform;
+import jnr.ffi.Pointer;
+import jnr.ffi.Runtime;
+import jnr.ffi.Struct;
+import jnr.ffi.provider.ParameterFlags;
 
-class JNRLoader {
-    
+class JNRHelper {
+
     private static String PLATFORM = getPlatform();
 
     static <L> L load(Class<L> clazz, String libName) {
         
         try {
-            URI uri = JNRLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+            URI uri = JNRHelper.class.getProtectionDomain().getCodeSource().getLocation().toURI();
             File location = new File(uri);
             boolean isJar = location.isFile();
             File dir = isJar ? location.getParentFile() : new File(location, PLATFORM);
@@ -58,6 +63,18 @@ class JNRLoader {
             return "linux64";
         } else {
             throw new VelvetVideoException("Unsupported platform. Supported platforms are windows64 and linux64");
+        }
+    }
+
+    static <T extends Struct> T struct(Class<T> clazz, Pointer value) {
+        try {
+            Constructor<T> constructor = clazz.getConstructor(Runtime.class);
+            T instance = constructor.newInstance(value.getRuntime());
+            instance.useMemory(value);
+            T.getMemory(instance, ParameterFlags.OUT);
+            return instance;
+        } catch (ReflectiveOperationException e) {
+            throw new VelvetVideoException(e);
         }
     }
 }
