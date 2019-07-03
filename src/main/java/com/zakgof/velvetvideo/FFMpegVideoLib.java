@@ -577,37 +577,37 @@ public class FFMpegVideoLib implements IVideoLib {
             public BufferedImage nextFrame() {
                 // TODO: wrong API - should read audio or video or whatever comes
 
-                for (;;) {
-                    libavcodec.av_init_packet(packet);
-                    packet.data.set((Pointer) null);
-                    packet.size.set(0);
-
-                    checkcode(libavformat.av_read_frame(formatCtx, packet));
-
-                    int index = packet.stream_index.get(); // TODO !!!!!
-                    IDecoderVideoStream stream = streams.get(index);
-
-                    int res = libavcodec.avcodec_send_packet(codecCtx, packet);
-
-                    // TODO: get frame params
-                    if (res == AVERROR_EAGAIN)
-                        continue;
-                    if (res == AVERROR_EOF)
-                        return null;
-                    checkcode(res);
-                    
-                    res = libavcodec.avcodec_receive_frame(codecCtx, frame);
-                    if (res == AVERROR_EAGAIN)
-                        continue;
-                    if (res == AVERROR_EOF)
-                        return null;
-                    checkcode(res);
-                    break;
-                }
+                libavcodec.av_init_packet(packet);
+                packet.data.set((Pointer) null);
+                packet.size.set(0);
                 
-                return toImage(frame);
+                for (;;) {
+                    int res = libavformat.av_read_frame(formatCtx, packet);
+                    if (res == AVERROR_EOF) {
+                        res = decodePacket(null);
+                        if (res == AVERROR_EOF)
+                            return null;  
+                        checkcode(res);    
+                        return toImage(frame);
+                    }
+                    checkcode(res);
+                    res = decodePacket(packet);
+                    if (res == 0)
+                        return toImage(frame);
+                    else if (res == AVERROR_EAGAIN)
+                        continue;
+                    checkcode(res);
+                }
             }
             
+            private int decodePacket(AVPacket pack) {
+                int res = libavcodec.avcodec_send_packet(codecCtx, pack);
+                if (res != AVERROR_EOF)
+                    checkcode(res);
+                // TODO: get frame params
+                return libavcodec.avcodec_receive_frame(codecCtx, frame);
+            }
+
             public BufferedImage toImage(AVFrame frame) {
                 
                 int width = frame.width.get();
@@ -650,7 +650,6 @@ public class FFMpegVideoLib implements IVideoLib {
 
             @Override
             public int read_packet(Pointer opaque, Pointer buf, int buf_size) {
-                System.err.println("Reading from custom avio " + buf_size + " bytes");
                 byte[] bytes = new byte[buf_size];
                 int bts;
                 bts = input.read(bytes);
@@ -667,7 +666,7 @@ public class FFMpegVideoLib implements IVideoLib {
                 final int AVSEEK_SIZE = 0x10000;   /* set file offset to EOF plus offset */
                 
                 
-                System.err.println("Seek custom avio to " + offset + "/" + whence); // TODO whence
+                // System.err.println("Seek custom avio to " + offset + "/" + whence); // TODO whence
                 // output.seek(offset);
                 if (whence == SEEK_SET)
                     input.seek(offset);
