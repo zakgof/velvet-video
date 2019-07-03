@@ -22,7 +22,7 @@ public class Main2 {
             .videoStream("video1", lib.encoderBuilder("libx264").bitrate(1000))
             .build(new File("c:\\pr\\1.mp4"))) {
 
-            for (int i = 0; i <= 300; i++) {
+            for (int i = 0; i < 3000; i++) {
                 BufferedImage image = ImageIO.read(new File("C:\\pr\\codeclab\\src\\file-" + i + ".bmp"));
                 muxer.videoStream("video1").encode(image, i);
             }

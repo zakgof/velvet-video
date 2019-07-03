@@ -205,7 +205,7 @@ public class FFMpegVideoLib implements IVideoLib {
                 checkcode(res);
                 byte[] data = new byte[packet.size.get()];
                 packet.data.get().get(0, data, 0, data.length);
-                System.err.println("OUTPUT " + packet.size.get() + " bytes, PTS=" + packet.pts.get() + " DTS=" + packet.dts.get());
+                System.err.println("Encoded packet " + packet.size.get() + " bytes, PTS=" + packet.pts.get() + " DTS=" + packet.dts.get());
                 output.send(packet);
                 libavcodec.av_packet_unref(packet);
                 
@@ -344,6 +344,7 @@ public class FFMpegVideoLib implements IVideoLib {
         private final ISeekableOutput output;
         private AVFormatContext formatCtx;
         private AVIOContext avioCtx;
+        private IOCallback callback;
 
         public MuxerImpl(String format, ISeekableOutput output, Map<String, IEncoder.IBuilder> videoBuilders) {
             
@@ -352,22 +353,19 @@ public class FFMpegVideoLib implements IVideoLib {
             this.libavformat = JNRLoader.load(LibAVFormat.class, "avformat-58");
             
             
-            
-            
-            
             AVOutputFormat outputFmt = libavformat.av_guess_format(format, null, null);
 
             PointerByReference ctxptr = new PointerByReference();
-            checkcode(libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, "mp4", null));
+            checkcode(libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, null, null));
             
             formatCtx = new AVFormatContext(NativeRuntime.getInstance());
             formatCtx.useMemory(ctxptr.getValue());
             Struct.getMemory(formatCtx, ParameterFlags.OUT);
 
-            IOCallback callback = new IOCallback();
-            Pointer buffer = libavutil.av_malloc(32768); // NativeRuntime.getInstance().getMemoryManager().allocateDirect(32768);
+            callback = new IOCallback();
+            Pointer buffer = libavutil.av_malloc(32768 + 64); // NativeRuntime.getInstance().getMemoryManager().allocateDirect(32768);
             
-            avioCtx = libavformat.avio_alloc_context(buffer, 32768, 1, buffer, callback, callback, callback);
+            avioCtx = libavformat.avio_alloc_context(buffer, 32768, 1, null, null, callback, callback);
             int flagz = formatCtx.ctx_flags.get();
             formatCtx.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO | flagz);
             formatCtx.pb.set(avioCtx);
@@ -461,14 +459,7 @@ public class FFMpegVideoLib implements IVideoLib {
             return videoStreams.get(name);
         }
         
-        class IOCallback implements IPacketIO, ISeeker {
-
-            @Override
-            public int seek(Pointer opaque, int offset, int whence) {
-                System.err.println("Seek custom avio to " + offset);
-                output.seek(offset);
-                return 0;
-            }
+        public class IOCallback implements IPacketIO, ISeeker {
 
             @Override
             public int read_packet(Pointer opaque, Pointer buf, int buf_size) {
@@ -476,9 +467,16 @@ public class FFMpegVideoLib implements IVideoLib {
                 byte[] bytes = new byte[buf_size];
                 buf.get(0, bytes, 0, buf_size);
                 output.write(bytes);
-                return 0;
+                return buf_size;
             }
             
+            @Override
+            public int seek(Pointer opaque, int offset, int whence) {
+                System.err.println("Seek custom avio to " + offset + "/" + whence); // TODO whence
+                output.seek(offset);
+                return offset;
+            }
+
         }
         
     }

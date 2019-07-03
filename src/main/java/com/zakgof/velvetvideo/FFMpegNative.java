@@ -1,12 +1,12 @@
 package com.zakgof.velvetvideo;
 
-import jnr.ffi.CallingConvention;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
 import jnr.ffi.annotations.Delegate;
 import jnr.ffi.annotations.In;
 import jnr.ffi.annotations.Out;
+import jnr.ffi.annotations.StdCall;
 import jnr.ffi.byref.PointerByReference;
 import jnr.ffi.types.size_t;
 import jnr.ffi.util.EnumMapper.IntegerEnum;
@@ -91,11 +91,11 @@ class FFMpegNative {
         void avio_context_free(PointerByReference avioContext);
         
         interface IPacketIO {
-            @Delegate(convention = CallingConvention.STDCALL) int read_packet(Pointer opaque, Pointer buf, int buf_size);
+            @Delegate @StdCall int read_packet(Pointer opaque, Pointer buf, int buf_size);
         }
 
         interface ISeeker {
-            @Delegate(convention = CallingConvention.STDCALL) int seek (Pointer opaque, int offset, int whence);
+            @Delegate @StdCall int seek (Pointer opaque, int offset, int whence);
         }
 
         void av_dump_format(AVFormatContext context, int i, String string, int j);
