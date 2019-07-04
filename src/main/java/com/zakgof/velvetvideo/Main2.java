@@ -29,7 +29,7 @@ public class Main2 {
 //            .build(new FileOutputStream("c:\\pr\\1.h264", false));
         
         try (IMuxer muxer = lib.muxer("mp4")
-            .videoStream("video1", lib.encoder("libx264").bitrate(100000))
+            .video("video1", lib.encoder("libx264").bitrate(100000))
             .build(new File("c:\\pr\\1.mp4"))) {
 
             for (int i = 0; i < 300; i++) {

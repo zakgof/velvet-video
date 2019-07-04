@@ -2,13 +2,8 @@ package com.zakgof.velvetvideo;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
 import java.util.List;
 
 public interface IVideoLib {
@@ -46,11 +41,14 @@ public interface IVideoLib {
     interface IMuxer extends AutoCloseable {
 
         interface IBuilder {
-            IBuilder videoStream(String name, IEncoder.IBuilder encoderBuilder);
+            
+            IMuxer.IBuilder video(String name, IEncoder.IBuilder encoderBuilder);
 
             IMuxer build(File outputFile);
             
             IMuxer build(ISeekableOutput output);
+
+            // IEncoder.IBuilder video(String codec);
         }
 
         void close();
@@ -79,48 +77,13 @@ public interface IVideoLib {
         void close();
     }
     
-    public static class FileOutput implements ISeekableOutput {
-        
-        private SeekableByteChannel channel;
-        private FileOutputStream fos;
-
-        public FileOutput(SeekableByteChannel channel) {
-            
-        }
-
-        public FileOutput(FileOutputStream fos) {
-            this.fos = fos;
-            this.channel = fos.getChannel();
-        }
-
-        @Override
-        public void write(byte[] bytes) {
-            try {
-                channel.write(ByteBuffer.wrap(bytes));
-            } catch (IOException e) {
-                throw new VelvetVideoException(e); 
-            }
-        }
-
-        @Override
-        public void seek(long position) {
-            try {
-                channel.position(position);
-            } catch (IOException e) {
-                throw new VelvetVideoException(e); 
-            }
-        }
-
-        @Override
-        public void close() {
-            try {
-                channel.close();
-                fos.close();
-            } catch (IOException e) {
-                throw new VelvetVideoException(e);
-            }
-        }
-        
+    interface IVideoProperties {
+        String codec();
+        double framerate();
+        long duration();
+        long frames();
+        int width();
+        int height();
     }
     
     interface ISeekableInput extends AutoCloseable {
@@ -128,59 +91,6 @@ public interface IVideoLib {
         void seek(long position);
         void close();
         long size();
-    }
-    
-    public static class FileInput implements ISeekableInput {
-        
-        private SeekableByteChannel channel;
-        private FileInputStream fos;
-
-        public FileInput(SeekableByteChannel channel) {
-            
-        }
-
-        public FileInput(FileInputStream fis) {
-            this.fos = fis;
-            this.channel = fis.getChannel();
-        }
-
-        @Override
-        public int read(byte[] bytes) {
-            try {
-                return channel.read(ByteBuffer.wrap(bytes));
-            } catch (IOException e) {
-                throw new VelvetVideoException(e); 
-            }
-        }
-
-        @Override
-        public void seek(long position) {
-            try {
-                channel.position(position);
-            } catch (IOException e) {
-                throw new VelvetVideoException(e); 
-            }
-        }
-
-        @Override
-        public void close() {
-            try {
-                channel.close();
-                fos.close();
-            } catch (IOException e) {
-                throw new VelvetVideoException(e);
-            }
-        }
-
-        @Override
-        public long size() {
-            try {
-                return channel.size();
-            } catch (IOException e) {
-                throw new VelvetVideoException(e);
-            }
-        }
-        
     }
 
 }

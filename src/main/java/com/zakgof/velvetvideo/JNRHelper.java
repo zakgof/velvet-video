@@ -77,4 +77,8 @@ class JNRHelper {
             throw new VelvetVideoException(e);
         }
     }
+
+    public static Pointer ptr(Struct.NumberField member) {
+        return member.getMemory().slice(member.offset());
+    }
 }
