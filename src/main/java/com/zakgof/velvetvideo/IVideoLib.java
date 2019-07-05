@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.function.Consumer;
 
 public interface IVideoLib {
 
@@ -53,7 +54,7 @@ public interface IVideoLib {
 
         void close();
 
-        IEncoder videoStream(String name);
+        IEncoder video(String name);
 
     }
 
@@ -61,21 +62,22 @@ public interface IVideoLib {
 
     interface IDemuxer extends AutoCloseable {
         void close();
-
-        List<IDecoderVideoStream> videoStreams();
+        List<IDecoderVideoStream> videos();
+        boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer); 
     }
 
-    interface IDecoderVideoStream extends AutoCloseable {
-        void close();
-
-        BufferedImage nextFrame();
+    interface IDecoderVideoStream {
+        String name();
+        // void close();
+        // IFrame nextFrame();
     }
     
-    interface ISeekableOutput extends AutoCloseable {
-        void write(byte[] bytes);
-        void seek(long position);
-        void close();
+    interface IFrame {
+        IDecoderVideoStream stream();
+        BufferedImage image();
+        long nanostamp();
     }
+
     
     interface IVideoProperties {
         String codec();
@@ -86,11 +88,23 @@ public interface IVideoLib {
         int height();
     }
     
+    interface IAudioPacket {
+        // IAudioStream stream();
+        byte[] data();
+    }
+    
     interface ISeekableInput extends AutoCloseable {
         int read(byte[] bytes);
         void seek(long position);
         void close();
         long size();
+    }
+    
+    
+    interface ISeekableOutput extends AutoCloseable {
+        void write(byte[] bytes);
+        void seek(long position);
+        void close();
     }
 
 }

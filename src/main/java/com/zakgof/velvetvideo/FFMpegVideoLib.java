@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.zakgof.velvetvideo.FFMpegNative.AVCodec;
@@ -36,12 +37,15 @@ import com.zakgof.velvetvideo.FFMpegNative.LibAVUtil;
 import com.zakgof.velvetvideo.FFMpegNative.LibSwScale;
 import com.zakgof.velvetvideo.FFMpegNative.SwsContext;
 import com.zakgof.velvetvideo.IVideoLib.IEncoder.IBuilder;
+import com.zakgof.velvetvideo.IVideoLib.IFrame;
 
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
 import jnr.ffi.Struct.int64_t;
 import jnr.ffi.byref.PointerByReference;
+import lombok.Value;
+import lombok.experimental.Accessors;
 
 public class FFMpegVideoLib implements IVideoLib {
     
@@ -455,7 +459,7 @@ public class FFMpegVideoLib implements IVideoLib {
         }
 
         @Override
-        public IEncoder videoStream(String name) {
+        public IEncoder video(String name) {
             return videoStreams.get(name);
         }
         
@@ -529,10 +533,13 @@ public class FFMpegVideoLib implements IVideoLib {
         private IOCallback callback;
         private AVIOContext avioCtx;
         private List<IDecoderVideoStream> streams = new ArrayList<>();
+        private AVPacket packet;
+        private Map<Integer, DecoderVideoStreamImpl> indexToVideoStream = new LinkedHashMap<>();
 
         public DemuxerImpl(FileInputStream input) {
             this.input = new FileSeekableInput(input);
             this.libavformat = JNRHelper.load(LibAVFormat.class, "avformat-58");
+            this.packet = libavcodec.av_packet_alloc(); // TODO free
             
             formatCtx = libavformat.avformat_alloc_context();
             this.callback = new IOCallback();
@@ -548,20 +555,57 @@ public class FFMpegVideoLib implements IVideoLib {
             checkcode(libavformat.avformat_find_stream_info(formatCtx, null));
             
             long nb = formatCtx.nb_streams.get();
-            for (long i=0; i<nb; i++) {
+            for (int i=0; i<nb; i++) {
                 AVStream avstream = JNRHelper.struct(AVStream.class, formatCtx.streams.get().getPointer(i /** TODO **/));
                 if (avstream.codec.get().codec_type.get() == AVMEDIA_TYPE_VIDEO) {
-                    streams.add(new DecoderVideoStreamImpl(avstream));
+                    DecoderVideoStreamImpl decoder = new DecoderVideoStreamImpl(avstream);
+                    streams.add(decoder);
+                    indexToVideoStream.put(i, decoder);
                 }
             }
             toString();
         }
         
+
+        @Override
+        public boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer) {
+            
+            libavcodec.av_init_packet(packet);
+            packet.data.set((Pointer) null);
+            packet.size.set(0);
+            
+            int res;
+            do {
+                AVPacket p = packet;
+                res = libavformat.av_read_frame(formatCtx, packet);
+                if (res == AVERROR_EOF || res == -1) {
+                    p = null;
+                } else {
+                    checkcode(res);
+                }                
+                res = decodePacket(p);
+            } while (res == AVERROR_EAGAIN);
+            if (res == AVERROR_EOF)
+                return false;
+            checkcode(res);
+            return frameOf(frameHolder.getPixels());
+        }
+
+        private int decodePacket(AVPacket p) {
+            int index = p.stream_index.get();
+            DecoderVideoStreamImpl stream = indexToVideoStream.get(index);
+            if (stream != null)
+                return stream.decodePacket(p);
+            System.err.println("WARNING: packet of unknown stream");
+            return 0;
+        }
+
+
         private class DecoderVideoStreamImpl implements IDecoderVideoStream {
 
             private AVStream avstream;
             private AVCodecContext codecCtx;
-            private AVPacket packet;
+            
             private FrameHolder frameHolder;
 
             public DecoderVideoStreamImpl(AVStream avstream) {
@@ -569,17 +613,13 @@ public class FFMpegVideoLib implements IVideoLib {
                 this.codecCtx = avstream.codec.get();
                 AVCodec codec = libavcodec.avcodec_find_decoder(codecCtx.codec_id.get());
                 checkcode(libavcodec.avcodec_open2(codecCtx, codec, null));
-                this.packet = libavcodec.av_packet_alloc(); // TODO free
-            }
-
-            @Override
-            public void close() {
-                // TODO Auto-generated method stub
                 
             }
+            
+            
 
             @Override
-            public BufferedImage nextFrame() {
+            public IFrame nextFrame() {
                 // TODO: wrong API - should read audio or video or whatever comes
 
                 libavcodec.av_init_packet(packet);
@@ -600,11 +640,16 @@ public class FFMpegVideoLib implements IVideoLib {
                 if (res == AVERROR_EOF)
                     return null;
                 checkcode(res);
-                return frameHolder.getPixels();
+                return frameOf(frameHolder.getPixels());
             }
             
-            private int decodePacket(AVPacket pack) {
-                int res = libavcodec.avcodec_send_packet(codecCtx, pack);
+            private IFrame frameOf(BufferedImage bi) {
+                long nanostamp = frameHolder.frame.pts.get() * 1000000000L * codecCtx.time_base.num.get() / codecCtx.time_base.den.get(); 
+                return new Frame(bi, nanostamp);
+            }
+
+            int decodePacket(AVPacket pack) {
+                int res = checkcode(libavcodec.avcodec_send_packet(codecCtx, pack));
                 if (res != AVERROR_EOF)
                     checkcode(res);
                 if (frameHolder == null) {
@@ -616,7 +661,7 @@ public class FFMpegVideoLib implements IVideoLib {
         }
         
         @Override
-        public List<IDecoderVideoStream> videoStreams() {
+        public List<IDecoderVideoStream> videos() {
             return streams;
         }
 
@@ -665,5 +710,13 @@ public class FFMpegVideoLib implements IVideoLib {
       
         
     }
+}
 
+@Accessors(fluent = true)
+@Value
+class Frame implements IFrame {
+
+    private final BufferedImage image;
+    private final long nanostamp;
+    
 }
