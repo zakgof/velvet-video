@@ -129,7 +129,7 @@ public class EncodeDecodeTest {
                 BufferedImage color = colorImage(i);
                 BufferedImage bw = bwImage(i);
                 muxer.video("color").encode(color, i);
-                muxer.video("bw").encode(color, i);
+                muxer.video("bw").encode(bw, i);
                 colorOrig[i] = color;
                 bwOrig[i] = bw;
             }
@@ -190,7 +190,7 @@ public class EncodeDecodeTest {
             for (int y=0; y<480; y++) {
                 int offset = (x + y * 640) * 3; 
                 bytes[offset] = bytes[offset + 1] = bytes[offset + 2] =
-                        (byte) ((int) (127 + 127 * Math.sin((x-y) * 0.14  * (seed+1))) & 0xFF);
+                        (byte) ((int) (127 + 127 * Math.sin((x-y) * 0.64  / (seed+1))) & 0xFF);
             }
         }
         return image;
