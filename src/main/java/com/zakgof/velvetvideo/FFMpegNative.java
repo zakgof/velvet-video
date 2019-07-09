@@ -459,7 +459,28 @@ class FFMpegNative {
 
         public  AVRational r_frame_rate = inner(new AVRational(getRuntime()));
 
-       public Pointer codecpar = new Pointer();
+        public Pointer codecpar = new Pointer();
+        public Pointer info = new Pointer();
+        
+        public Signed32 pts_wrap_bits = new Signed32();  /**< number of bits in pts (used for wrapping control) */
+        public int64_t first_dts = new int64_t();
+        public int64_t cur_dts = new int64_t();
+        public int64_t last_IP_pts = new int64_t();
+
+        public Signed32 last_IP_duration = new Signed32();
+        public Signed32 probe_packets = new Signed32();
+        public Signed32 codec_info_nb_frames = new Signed32();
+        public Signed32 need_parsing = new Signed32(); // enum AVStreamParseType need_parsing; TODO
+        public Pointer parser = new Pointer();
+        public Pointer last_in_packet_buffer = new Pointer();
+      
+
+        // AVProbeData probe_data;
+        public Pointer AVProbeData_filename = new Pointer();
+        public Pointer AVProbeData_buf = new Pointer();
+        public Signed32 AVProbeData_buf_size = new Signed32();
+        public Pointer AVProbeData_mime_type = new Pointer();
+
     }
 
 }

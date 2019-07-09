@@ -62,7 +62,7 @@ public interface IVideoLib {
 
     interface IDemuxer extends AutoCloseable {
         void close();
-        List<IDecoderVideoStream> videos();
+        List<? extends IDecoderVideoStream> videos();
         boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer); 
     }
 
