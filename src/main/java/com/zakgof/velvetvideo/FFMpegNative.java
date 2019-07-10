@@ -77,6 +77,8 @@ class FFMpegNative {
         int av_log_set_level(int val);
         
         Pointer av_malloc(@size_t int size);
+        
+        AVDictionaryEntry av_dict_get(AVDictionary dict, String key, @In AVDictionaryEntry prev, int flags);
     }
 
     public interface LibAVFormat {
@@ -126,7 +128,7 @@ class FFMpegNative {
     }
 
     public static class AVDictionary extends Struct {
-        protected AVDictionary(Runtime runtime) {
+        public AVDictionary(Runtime runtime) {
             super(runtime);
         }
     }
@@ -392,7 +394,29 @@ class FFMpegNative {
         Signed32 ctx_flags = new Signed32();
         Unsigned32 nb_streams = new Unsigned32();
         Pointer streams = new Pointer();
-
+        
+        String filename = new Struct.UTF8String(1024);
+        String url = new Struct.UTF8StringRef();
+        int64_t start_time = new int64_t();
+        int64_t duration = new int64_t();
+        int64_t bit_rate = new int64_t();
+        Unsigned32 packet_size = new Unsigned32();
+        Unsigned32 max_delay = new Unsigned32();
+        Unsigned32 flags = new Unsigned32();
+        int64_t probesize= new int64_t();
+        int64_t max_analyze_duration = new int64_t();
+        Pointer key = new Pointer();
+        Signed32 keylen = new Signed32();
+        Unsigned32 nb_programs = new Unsigned32();
+        Pointer programs = new Pointer();
+        public Signed32 video_codec_id = new Signed32();
+        public Signed32 audio_codec_id = new Signed32();
+        public Signed32 subtitle_codec_id = new Signed32();
+        Unsigned32 max_index_size = new Unsigned32();
+        Unsigned32 max_index_size2 = new Unsigned32();
+        Unsigned32 nb_chapters = new Unsigned32();
+        Pointer chapters = new Pointer();
+        StructRef<AVDictionary> metadata = new StructRef<>(AVDictionary.class);
     }
 
     public static class AVOutputFormat extends Struct {
@@ -446,7 +470,7 @@ class FFMpegNative {
 
         public AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
 
-        public Pointer metadata = new Pointer();
+        StructRef<AVDictionary> metadata = new StructRef<>(AVDictionary.class);
 
         public AVRational avg_frame_rate = inner(new AVRational(getRuntime()));
 
@@ -481,6 +505,15 @@ class FFMpegNative {
         public Signed32 AVProbeData_buf_size = new Signed32();
         public Pointer AVProbeData_mime_type = new Pointer();
 
+    }
+    
+    public static class AVDictionaryEntry extends Struct {
+        public AVDictionaryEntry(Runtime runtime) {
+            super(runtime);
+        }
+        
+        public String key = new UTF8StringRef();
+        public String value = new UTF8StringRef();
     }
 
 }

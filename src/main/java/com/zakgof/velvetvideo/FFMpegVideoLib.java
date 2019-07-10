@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 
 import com.zakgof.velvetvideo.FFMpegNative.AVCodec;
 import com.zakgof.velvetvideo.FFMpegNative.AVCodecContext;
+import com.zakgof.velvetvideo.FFMpegNative.AVDictionary;
+import com.zakgof.velvetvideo.FFMpegNative.AVDictionaryEntry;
 import com.zakgof.velvetvideo.FFMpegNative.AVFormatContext;
 import com.zakgof.velvetvideo.FFMpegNative.AVFrame;
 import com.zakgof.velvetvideo.FFMpegNative.AVIOContext;
@@ -39,6 +41,7 @@ import com.zakgof.velvetvideo.FFMpegNative.SwsContext;
 import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoLib.IEncoder.IBuilder;
 import com.zakgof.velvetvideo.IVideoLib.IFrame;
+import com.zakgof.velvetvideo.IVideoLib.IVideoStreamProperties;
 
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
@@ -57,6 +60,8 @@ public class FFMpegVideoLib implements IVideoLib {
     
     private static final int AVMEDIA_TYPE_VIDEO = 0;
     private static final int AVMEDIA_TYPE_AUDIO = 1;
+    
+    private static final int AV_DICT_IGNORE_SUFFIX = 2; 
     
     private static final int AVERROR_EOF = -541478725;
     private static final int AVERROR_EAGAIN = -11;
@@ -107,20 +112,17 @@ public class FFMpegVideoLib implements IVideoLib {
         ctx.time_base.num.set(builder.timebaseNum);
         ctx.time_base.den.set(builder.timebaseDen);
         int firstFormat = codec.pix_fmts.get().getInt(0);
-        ctx.pix_fmt.set(firstFormat);
-        System.err.println("FORMAT " + ctx.pix_fmt.get());
-        // avcontext.gop_size.set(10); /* emit one intra frame every ten frames */
-        // avcontext.max_b_frames.set(2);            
-        ctx.width.set(640); // TODO
+        ctx.pix_fmt.set(firstFormat); // TODO ?
+        ctx.width.set(640); // TODO !!!
         ctx.height.set(480);
-        Pointer[] opts = createDictionary(builder);
+        Pointer[] opts = createDictionary(builder.params);
         checkcode(libavcodec.avcodec_open2(ctx, codec, opts));
         
     }
 
-    private Pointer[] createDictionary(EncoderBuilderImpl builder) {
+    private Pointer[] createDictionary(Map<String, String> map) {
         Pointer[] opts = new Pointer[1];
-        for (Entry<String, String> entry : builder.params.entrySet()) {
+        for (Entry<String, String> entry : map.entrySet()) {
             libavutil.av_dict_set(opts, entry.getKey(), entry.getValue(), 0);
         }
         return opts;
@@ -202,6 +204,7 @@ public class FFMpegVideoLib implements IVideoLib {
         private int timebaseDen = 30;
         private int bitrate = 400000;
         private Map<String, String> params = new HashMap<>();
+        private Map<String, String> metadata = new HashMap<>();
 
         public EncoderBuilderImpl(String codec) {
             this.codec = codec;
@@ -209,6 +212,7 @@ public class FFMpegVideoLib implements IVideoLib {
 
         @Override
         public IBuilder framerate(int framerate) {
+            this.timebaseNum = 1;
             this.timebaseDen = framerate;
             return this;
         }
@@ -224,9 +228,15 @@ public class FFMpegVideoLib implements IVideoLib {
             params.put(key, value);
             return this;
         }
+        
+        @Override
+        public IBuilder metadata(String key, String value) {
+            metadata.put(key, value);
+            return this;
+        }
 
         private EncoderImpl build(IPacketStream stream) {
-            return new EncoderImpl(stream, this, timebaseNum, timebaseDen);      
+            return new EncoderImpl(stream, this);      
         }
 
         @Override
@@ -246,25 +256,24 @@ public class FFMpegVideoLib implements IVideoLib {
         private final int containerTimeBaseNum;
         private final int containerTimeBaseDen;
         private final int streamIndex;
+        private EncoderBuilderImpl builder;
 
-        private EncoderImpl(IPacketStream output, EncoderBuilderImpl builder, int containerTimeBaseNum, int containerTimeBaseDen) {            
-            this(output, createCodecContext(builder), containerTimeBaseNum, containerTimeBaseDen, 0);
+        private EncoderImpl(IPacketStream output, EncoderBuilderImpl builder) {            
+            this(builder, output, createCodecContext(builder), builder.timebaseNum, builder.timebaseDen, 0);
         }
         
-        private EncoderImpl(IPacketStream output, AVCodecContext codecCtx, int containerTimeBaseNum, int containerTimeBaseDen, int streamIndex) {
+        private EncoderImpl(EncoderBuilderImpl builder, IPacketStream output, AVCodecContext codecCtx, int containerTimeBaseNum, int containerTimeBaseDen, int streamIndex) {
             this.output = output;            
             this.codecCtx = codecCtx;
             this.containerTimeBaseNum = containerTimeBaseNum;
             this.containerTimeBaseDen = containerTimeBaseDen;
             this.packet = libavcodec.av_packet_alloc(); // TODO free
             this.streamIndex = streamIndex;
+            this.builder = builder;
         }       
 
         @Override
         public void encode(BufferedImage image, long pts) {
-            
-            // System.err.println("Pushing frame " + pts + " for stream " + streamIndex);
-
             int width = image.getWidth();
             int height = image.getHeight();
             codecCtx.width.set(width);
@@ -289,8 +298,6 @@ public class FFMpegVideoLib implements IVideoLib {
                 libavcodec.av_init_packet(packet);
                 packet.data.set((Pointer) null);
                 packet.size.set(0);
-                
-                
 
                 int res = libavcodec.avcodec_receive_packet(codecCtx, packet);
                 // System.err.println("  codec returns : " + res);
@@ -350,7 +357,8 @@ public class FFMpegVideoLib implements IVideoLib {
     private class MuxerBuilderImpl implements IMuxer.IBuilder {
 
         private String format;
-        private Map<String, IEncoder.IBuilder> videos = new LinkedHashMap<>();
+        private Map<String, EncoderBuilderImpl> videos = new LinkedHashMap<>();
+        private Map<String, String> metadata = new LinkedHashMap<>();
 
         public MuxerBuilderImpl(String format) {
             this.format = format;
@@ -358,20 +366,27 @@ public class FFMpegVideoLib implements IVideoLib {
 
         @Override
         public IMuxer.IBuilder video(String name, IEncoder.IBuilder encoderBuilder) {
-            videos.put(name, encoderBuilder);
+            videos.put(name, (EncoderBuilderImpl) encoderBuilder);
+            metadata.put("handler_name", name);
+            return this;
+        }
+        
+        @Override
+        public IMuxer.IBuilder metadata(String key, String value) {
+            metadata.put(key, value);
             return this;
         }
 
         @Override
         public IMuxer build(ISeekableOutput output) {
-            return new MuxerImpl(format, output, videos);
+            return new MuxerImpl(output, this);
         }
 
         @Override
         public IMuxer build(File outputFile) {
             try {
                 FileSeekableOutput output = new FileSeekableOutput(new FileOutputStream(outputFile));
-                return new MuxerImpl(format, output, videos);
+                return new MuxerImpl(output, this);
             } catch (FileNotFoundException e) {
                 throw new VelvetVideoException(e);
             }
@@ -381,8 +396,6 @@ public class FFMpegVideoLib implements IVideoLib {
 
     private class MuxerImpl implements IMuxer {
 
-        
-        
         private final LibAVFormat libavformat;
         private final Map<String, IEncoder> videoStreams;
         private final ISeekableOutput output;
@@ -390,26 +403,12 @@ public class FFMpegVideoLib implements IVideoLib {
         private AVIOContext avioCtx;
         private IOCallback callback;
 
-        public MuxerImpl(String format, ISeekableOutput output, Map<String, IEncoder.IBuilder> videoBuilders) {
+        private MuxerImpl(ISeekableOutput output, MuxerBuilderImpl builder) {
             
-            this.output = output;
             this.libavformat = JNRHelper.load(LibAVFormat.class, "avformat-58");
-            
-            AVOutputFormat outputFmt = libavformat.av_guess_format(format, null, null);
-            if (outputFmt == null) {
-                throw new VelvetVideoException("Unsupported format: " + format);
-            }
-
-            PointerByReference ctxptr = new PointerByReference();
-            checkcode(libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, null, null));
-            this.formatCtx = JNRHelper.struct(AVFormatContext.class, ctxptr.getValue()); 
-
-            this.callback = new IOCallback();
-            Pointer buffer = libavutil.av_malloc(AVIO_CUSTOM_BUFFER_SIZE + 64); // TODO free buffer
-            avioCtx = libavformat.avio_alloc_context(buffer, AVIO_CUSTOM_BUFFER_SIZE, 1, null, null, callback, callback);
-            int flagz = formatCtx.ctx_flags.get();
-            formatCtx.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO | flagz);
-            formatCtx.pb.set(avioCtx);
+            this.output = output;
+            this.formatCtx = createFormatContext(builder.format, builder.metadata);
+            initCustomAvio();
             
             IPacketStream ps = new IPacketStream() {
 
@@ -425,7 +424,7 @@ public class FFMpegVideoLib implements IVideoLib {
                 
             };
             
-            Map<String, AVStream> streams = videoBuilders.entrySet().stream()
+            Map<String, AVStream> streams = builder.videos.entrySet().stream()
                .collect(Collectors.toMap(Entry::getKey, entry -> createVideoStream((EncoderBuilderImpl)entry.getValue())));
          
             checkcode(libavformat.avformat_write_header(formatCtx, null));
@@ -434,9 +433,31 @@ public class FFMpegVideoLib implements IVideoLib {
                .collect(Collectors.toMap(Entry::getKey, entry -> {
                    AVStream stream = entry.getValue();
                    AVCodecContext codecCtx = stream.codec.get();
-                   return new EncoderImpl(ps, codecCtx, stream.time_base.num.get(), stream.time_base.den.get(), stream.index.get());
+                   return new EncoderImpl((EncoderBuilderImpl) builder.videos.get(entry.getKey()), ps, codecCtx, stream.time_base.num.get(), stream.time_base.den.get(), stream.index.get());
                }));
             
+        }
+
+        private void initCustomAvio() {
+            this.callback = new IOCallback();
+            Pointer buffer = libavutil.av_malloc(AVIO_CUSTOM_BUFFER_SIZE + 64); // TODO free buffer
+            avioCtx = libavformat.avio_alloc_context(buffer, AVIO_CUSTOM_BUFFER_SIZE, 1, null, null, callback, callback);
+            int flagz = formatCtx.ctx_flags.get();
+            formatCtx.ctx_flags.set(AVFMT_FLAG_CUSTOM_IO | flagz);
+            formatCtx.pb.set(avioCtx);
+        }
+
+        private AVFormatContext createFormatContext(String format, Map<String, String> metadata) {
+            AVOutputFormat outputFmt = libavformat.av_guess_format(format, null, null);
+            if (outputFmt == null) {
+                throw new VelvetVideoException("Unsupported format: " + format);
+            }
+            PointerByReference ctxptr = new PointerByReference();
+            checkcode(libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, null, null));
+            AVFormatContext ctx = JNRHelper.struct(AVFormatContext.class, ctxptr.getValue());
+            Pointer[] metadataPtr = createDictionary(metadata);
+            ctx.metadata.set(metadataPtr[0]);
+            return ctx;
         }
 
         private AVStream createVideoStream(EncoderBuilderImpl builder) {
@@ -452,6 +473,8 @@ public class FFMpegVideoLib implements IVideoLib {
             stream.id.set(formatCtx.nb_streams.get() - 1);
             stream.time_base.den.set(builder.timebaseDen);
             stream.time_base.num.set(builder.timebaseNum);
+            Pointer[] metadata = createDictionary(builder.metadata);
+            stream.metadata.set(metadata[0]);
             return stream;
         }
 
@@ -535,6 +558,18 @@ public class FFMpegVideoLib implements IVideoLib {
         return new DemuxerImpl((FileInputStream) is);
     }
     
+    private Map<String, String> dictionaryToMap(AVDictionary dictionary) {
+        Map<String, String> metadata = new LinkedHashMap<>();
+        AVDictionaryEntry entry = null;
+        do {
+            entry = libavutil.av_dict_get(dictionary, "", entry, AV_DICT_IGNORE_SUFFIX);
+            if (entry != null) {
+                metadata.put(entry.key.get(), entry.value.get());
+            }
+        } while (entry != null);
+        return metadata;
+    }
+
     private class DemuxerImpl implements IDemuxer {
         
         private final LibAVFormat libavformat;
@@ -671,12 +706,37 @@ public class FFMpegVideoLib implements IVideoLib {
             public String name() {
                 return name;
             }
+
+            @Override
+            public Map<String, String> metadata() {
+                AVDictionary dictionary = avstream.metadata.get();
+                return dictionaryToMap(dictionary);
+            }
+            
+            @Override
+            public IVideoStreamProperties properties() {
+                int timebase_n = avstream.time_base.num.get();
+                int timebase_d = avstream.time_base.den.get();
+                long duration = avstream.duration.get() * 1000L * timebase_n / timebase_d;
+                long frames = avstream.nb_frames.get();
+                int width = codecCtx.width.get();
+                int height = codecCtx.height.get();
+                AVCodec codec = libavcodec.avcodec_find_decoder(codecCtx.codec_id.get());
+                double framerate = (double)avstream.avg_frame_rate.num.get() / avstream.avg_frame_rate.den.get();
+                return new VideoStreamProperties(codec.name.get(), framerate, duration, frames, width, height);
+            }
             
         }
         
         @Override
         public List<? extends IDecoderVideoStream> videos() {
             return streams;
+        }
+        
+        @Override
+        public Map<String, String> metadata() {
+            AVDictionary dictionary = formatCtx.metadata.get();
+            return dictionaryToMap(dictionary);
         }
 
         @Override
@@ -720,8 +780,6 @@ public class FFMpegVideoLib implements IVideoLib {
             }
 
         }
-
-      
         
     }
 }
@@ -732,4 +790,15 @@ class Frame implements IFrame {
     private final BufferedImage image;
     private final long nanostamp;
     private final IDecoderVideoStream stream;
+}
+
+@Accessors(fluent = true)
+@Value
+class VideoStreamProperties implements IVideoStreamProperties {
+    private final String codec;
+    private final double framerate;
+    private final long duration;
+    private final long frames;
+    private final int width;
+    private final int height;
 }

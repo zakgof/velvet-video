@@ -5,14 +5,13 @@ import java.awt.image.DataBufferByte;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,27 +21,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IMuxer;
 
-public class EncodeDecodeTest {
+public class EncodeDecodeTest extends VelvetVideoTest {
     
-    private static final int FRAMES = 50;
-    private IVideoLib lib = new FFMpegVideoLib();
-    private static Path dir;
-    
-    @BeforeAll
-    private static void setup() throws IOException {
-        dir = Files.createTempDirectory("velvet-video-test-");
-    }
-    
-    // @AfterAll
-    private static void cleanup() {
-        dir.toFile().delete();
-    }
+    private static final int FRAMES = 16;
 
-    // @AfterEach
-    private void clean() {
-        for (File file : dir.toFile().listFiles())
-            file.delete();
-    }
     
     @Disabled
     @ParameterizedTest
@@ -54,24 +36,24 @@ public class EncodeDecodeTest {
 
     @ParameterizedTest
     @CsvSource({
-//        "mpeg4,        avi",
-//        "libx264,      avi",
-//        "mpeg2video,   avi",
-//        "mpeg1video,   avi",
-//        "mjpeg,        avi",
-//        "libxvid,      avi",
-//        
-//        "mpeg4,        mp4",
-//        "libx264,      mp4",
-//        "libx265,      mp4",
-//        "libvpx-vp9,   mp4",
-//
-//        "mpeg4,        matroska",
-//        "libx264,      matroska",
-//        "mpeg2video,   matroska",
-//        "mpeg1video,   matroska",
-//        "mjpeg,        matroska",
-//        "libxvid,      matroska",
+        "mpeg4,        avi",
+        "libx264,      avi",
+        "mpeg2video,   avi",
+        "mpeg1video,   avi",
+        "mjpeg,        avi",
+        "libxvid,      avi",
+        
+        "mpeg4,        mp4",
+        "libx264,      mp4",
+        "libx265,      mp4",
+        "libvpx-vp9,   mp4",
+
+        "mpeg4,        matroska",
+        "libx264,      matroska",
+        "mpeg2video,   matroska",
+        "mpeg1video,   matroska",
+        "mjpeg,        matroska",
+        "libxvid,      matroska",
         "libtheora,    matroska",
     })
     public void testEncodeDecodeCompare(String codec, String format) throws IOException {        
@@ -143,16 +125,32 @@ public class EncodeDecodeTest {
                 if (frame.stream().name().equals("color")) {                    
                     BufferedImage imgrestored = frame.image();
                     double diff = diff(colorOrig[index[0]], imgrestored);
-                    Assertions.assertEquals(0, diff, 20.0, "Color frame " + index[0] + " differs by " + diff);
+                    Assertions.assertEquals(0, diff, 10.0, "Color frame " + index[0] + " differs by " + diff);
                     index[0]++;
                 }   
                 if (frame.stream().name().equals("bw")) {                    
                     BufferedImage imgrestored = frame.image();
                     double diff = diff(bwOrig[index[1]], imgrestored);
-                    Assertions.assertEquals(0, diff, 20.0, "BW frame " + index[1] + " differs by " + diff);
+                    Assertions.assertEquals(0, diff, 10.0, "BW frame " + index[1] + " differs by " + diff);
                     index[1]++;
                 }   
             }, null));
+        }
+    }
+
+    @Test
+    public void testStreamMetadata() throws IOException {
+        Path file = dir.resolve("metadata.mp4");
+        try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4")
+                .metadata("language", "ukr")
+                .metadata("title", "somevideo"))
+            .build(file.toFile())) {            
+            muxer.video("color").encode(VelvetVideoTest.colorImage(2), 0);            
+        }
+        try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
+            Map<String, String> restored = demuxer.videos().get(0).metadata();
+            Assertions.assertEquals("ukr", restored.get("language"));
+            Assertions.assertEquals("somevideo", restored.get("title"));
         }
     }
 
@@ -167,33 +165,6 @@ public class EncodeDecodeTest {
         return diff / bytes1.length;
     }
 
-    private BufferedImage colorImage(int seed) {
-        BufferedImage image = new BufferedImage(640,  480, BufferedImage.TYPE_3BYTE_BGR);
-        DataBufferByte dataBuffer = (DataBufferByte) image.getRaster().getDataBuffer();
-        byte[] bytes = dataBuffer.getData();
-        for (int x=0; x<640; x++) {
-            for (int y=0; y<480; y++) {
-                int offset = (x + y * 640) * 3; 
-                bytes[offset] =     (byte) ((int) (127 + 127 * Math.sin(x * 0.12  / (seed+1))) & 0xFF);
-                bytes[offset + 1] = (byte) ((int) (127 + 127 * Math.sin(y * 0.081  / (seed+1))) & 0xFF);
-                bytes[offset + 2] = (byte) ((int) (127 + 127 * Math.sin((x+y) * 0.01 / (seed+1))) & 0xFF);
-            }
-        }
-        return image;
-    }
-    
-    private BufferedImage bwImage(int seed) {
-        BufferedImage image = new BufferedImage(640,  480, BufferedImage.TYPE_3BYTE_BGR);
-        DataBufferByte dataBuffer = (DataBufferByte) image.getRaster().getDataBuffer();
-        byte[] bytes = dataBuffer.getData();
-        for (int x=0; x<640; x++) {
-            for (int y=0; y<480; y++) {
-                int offset = (x + y * 640) * 3; 
-                bytes[offset] = bytes[offset + 1] = bytes[offset + 2] =
-                        (byte) ((int) (127 + 127 * Math.sin((x-y) * 0.64  / (seed+1))) & 0xFF);
-            }
-        }
-        return image;
-    }
+  
 
 }

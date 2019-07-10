@@ -2,9 +2,12 @@ package com.zakgof.velvetvideo;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public interface IVideoLib {
@@ -27,6 +30,8 @@ public interface IVideoLib {
             IBuilder bitrate(int bitrate);
 
             IBuilder param(String key, String value);
+            
+            IBuilder metadata(String key, String value);
 
             IEncoder build(OutputStream output);
         }
@@ -44,6 +49,8 @@ public interface IVideoLib {
         interface IBuilder {
             
             IMuxer.IBuilder video(String name, IEncoder.IBuilder encoderBuilder);
+            
+            IBuilder metadata(String key, String value);
 
             IMuxer build(File outputFile);
             
@@ -59,17 +66,29 @@ public interface IVideoLib {
     }
 
     IDemuxer demuxer(InputStream is);
+    
+    default IDemuxer demuxer(File file) {
+        try {
+            return demuxer(new FileInputStream(file));
+        } catch (FileNotFoundException e) {
+            throw new VelvetVideoException(e);
+        }
+    }
 
     interface IDemuxer extends AutoCloseable {
         void close();
         List<? extends IDecoderVideoStream> videos();
-        boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer); 
+        boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer);
+        Map<String, String> metadata(); 
     }
 
     interface IDecoderVideoStream {
         String name();
         // void close();
         // IFrame nextFrame();
+
+        Map<String, String> metadata();
+        IVideoStreamProperties properties();
     }
     
     interface IFrame {
@@ -79,7 +98,7 @@ public interface IVideoLib {
     }
 
     
-    interface IVideoProperties {
+    interface IVideoStreamProperties {
         String codec();
         double framerate();
         long duration();
@@ -106,5 +125,7 @@ public interface IVideoLib {
         void seek(long position);
         void close();
     }
+
+    
 
 }
