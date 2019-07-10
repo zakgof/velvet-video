@@ -7,29 +7,30 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 
 public class VelvetVideoTest {
-    
+
     protected IVideoLib lib = new FFMpegVideoLib();
     protected static Path dir;
-    
+
     @BeforeAll
     private static void setup() throws IOException {
         dir = Files.createTempDirectory("velvet-video-test-");
     }
-    
-    // @AfterAll
+
+    @AfterAll
     private static void cleanup() {
         dir.toFile().delete();
     }
 
-    // @AfterEach
+    @AfterEach
     private void clean() {
         for (File file : dir.toFile().listFiles())
             file.delete();
     }
-    
     
     protected static BufferedImage colorImage(int seed) {
         BufferedImage image = new BufferedImage(640,  480, BufferedImage.TYPE_3BYTE_BGR);
@@ -45,7 +46,7 @@ public class VelvetVideoTest {
         }
         return image;
     }
-    
+
     protected static BufferedImage bwImage(int seed) {
         BufferedImage image = new BufferedImage(640,  480, BufferedImage.TYPE_3BYTE_BGR);
         DataBufferByte dataBuffer = (DataBufferByte) image.getRaster().getDataBuffer();

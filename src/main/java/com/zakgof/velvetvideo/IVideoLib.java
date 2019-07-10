@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -18,11 +17,9 @@ public interface IVideoLib {
 
     IMuxer.IBuilder muxer(String format);
 
-    interface IEncoder extends AutoCloseable {
+    interface IEncoder {
 
         void encode(BufferedImage bi, long pts);
-
-        void close();
 
         interface IBuilder {
             IBuilder framerate(int framerate);
@@ -33,7 +30,7 @@ public interface IVideoLib {
             
             IBuilder metadata(String key, String value);
 
-            IEncoder build(OutputStream output);
+            // IEncoder build(OutputStream output);
         }
 
     }

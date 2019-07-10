@@ -7,7 +7,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 
 import javax.imageio.ImageIO;
 
@@ -135,22 +134,6 @@ public class EncodeDecodeTest extends VelvetVideoTest {
                     index[1]++;
                 }   
             }, null));
-        }
-    }
-
-    @Test
-    public void testStreamMetadata() throws IOException {
-        Path file = dir.resolve("metadata.mp4");
-        try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4")
-                .metadata("language", "ukr")
-                .metadata("title", "somevideo"))
-            .build(file.toFile())) {            
-            muxer.video("color").encode(VelvetVideoTest.colorImage(2), 0);            
-        }
-        try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
-            Map<String, String> restored = demuxer.videos().get(0).metadata();
-            Assertions.assertEquals("ukr", restored.get("language"));
-            Assertions.assertEquals("somevideo", restored.get("title"));
         }
     }
 

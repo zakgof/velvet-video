@@ -78,7 +78,7 @@ class FFMpegNative {
         
         Pointer av_malloc(@size_t int size);
         
-        AVDictionaryEntry av_dict_get(AVDictionary dict, String key, @In AVDictionaryEntry prev, int flags);
+        AVDictionaryEntry av_dict_get(@In Pointer dictionary, @In String key, @In AVDictionaryEntry prev, int flags);
     }
 
     public interface LibAVFormat {
@@ -109,6 +109,9 @@ class FFMpegNative {
         interface ISeeker {
             @Delegate @StdCall int seek (Pointer opaque, int offset, int whence);
         }
+        
+        interface ICustomAvioCallback extends IPacketIO, ISeeker {
+        }
 
         void av_dump_format(AVFormatContext context, int i, String string, int j);
         
@@ -125,12 +128,6 @@ class FFMpegNative {
         int av_read_frame(AVFormatContext contexxt, AVPacket pkt);
         
         
-    }
-
-    public static class AVDictionary extends Struct {
-        public AVDictionary(Runtime runtime) {
-            super(runtime);
-        }
     }
 
     public static class AVPacket extends Struct {
@@ -416,7 +413,7 @@ class FFMpegNative {
         Unsigned32 max_index_size2 = new Unsigned32();
         Unsigned32 nb_chapters = new Unsigned32();
         Pointer chapters = new Pointer();
-        StructRef<AVDictionary> metadata = new StructRef<>(AVDictionary.class);
+        Pointer metadata = new Pointer();
     }
 
     public static class AVOutputFormat extends Struct {
@@ -470,7 +467,7 @@ class FFMpegNative {
 
         public AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
 
-        StructRef<AVDictionary> metadata = new StructRef<>(AVDictionary.class);
+        public Pointer metadata = new Pointer();
 
         public AVRational avg_frame_rate = inner(new AVRational(getRuntime()));
 
