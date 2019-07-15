@@ -60,4 +60,15 @@ public class VelvetVideoTest {
         }
         return image;
     }
+    
+    protected double diff(BufferedImage im1, BufferedImage im2) {
+        byte[] bytes1 = ((DataBufferByte) im1.getRaster().getDataBuffer()).getData();
+        byte[] bytes2 = ((DataBufferByte) im2.getRaster().getDataBuffer()).getData();
+        double diff = 0;
+        for (int s=0; s<bytes1.length; s++) {
+            double delta = bytes1[s] - bytes2[s];
+            diff += Math.sqrt(delta * delta);
+        }
+        return diff / bytes1.length;
+    }
 }

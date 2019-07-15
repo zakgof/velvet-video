@@ -57,6 +57,12 @@ public class FFMpegVideoLib implements IVideoLib {
     private static final int AVMEDIA_TYPE_VIDEO = 0;
     private static final int AVMEDIA_TYPE_AUDIO = 1;
     
+
+    private static final int  AVSEEK_FLAG_BACKWARD =1; ///< seek backward
+    private static final int  AVSEEK_FLAG_BYTE     =2; ///< seeking based on position in bytes
+    private static final int  AVSEEK_FLAG_ANY      =4; ///< seek to any frame, even non-keyframes
+    private static final int  AVSEEK_FLAG_FRAME    =8;
+    
     private static final int AV_DICT_IGNORE_SUFFIX = 2; 
     
     private static final int AVERROR_EOF = -541478725;
@@ -647,15 +653,15 @@ public class FFMpegVideoLib implements IVideoLib {
             
             int res;
             do {
-                AVPacket p = packet;
                 res = libavformat.av_read_frame(formatCtx, packet);
+                System.out.println("read packet stream=" + packet.stream_index.get() + "  PTS/DTS=" + packet.pts.get() + "/" + packet.dts.get());
                 if (res == AVERROR_EOF || res == -1) {
                     if (flusher == null) {
                         flusher = new Flusher();
                     }
                     res = flusher.flush(videoConsumer, audioConsumer);
                 } else {
-                    res = decodePacket(p, videoConsumer, audioConsumer);
+                    res = decodePacket(packet, videoConsumer, audioConsumer);
                 }                
             } while (res == AVERROR_EAGAIN);
             if (res == AVERROR_EOF)
@@ -698,10 +704,13 @@ public class FFMpegVideoLib implements IVideoLib {
             private AVCodecContext codecCtx;
             
             private FrameHolder frameHolder;
+            private int index;
+            private long skipToPts = -1;
          
             public DecoderVideoStreamImpl(AVStream avstream, String name) {
                 this.avstream = avstream;
                 this.name = name;
+                this.index = avstream.index.get();
                 this.codecCtx = avstream.codec.get();
                 AVCodec codec = libavcodec.avcodec_find_decoder(codecCtx.codec_id.get());
                 checkcode(libavcodec.avcodec_open2(codecCtx, codec, null));
@@ -720,9 +729,26 @@ public class FFMpegVideoLib implements IVideoLib {
                     this.frameHolder = new FrameHolder(codecCtx.width.get(), codecCtx.height.get(), codecCtx.pix_fmt.get(), AVPixelFormat.AV_PIX_FMT_BGR24, false);
                 }
                 res = libavcodec.avcodec_receive_frame(codecCtx, frameHolder.frame);
+                System.out.print("Decoding packet: " + res);
                 if (res >=0) {
-                    videoConsumer.accept(frameOf(frameHolder.getPixels()));
+                    long pts = frameHolder.frame.pts.get();
+                    System.out.print(" got frame pts=" + pts);
+                    if (skipToPts != -1) {
+                        if (pts < skipToPts) {
+                            System.out.println(" but need to skip more to pts=" + skipToPts);
+                            res = -11;
+                        } else if (pts > skipToPts) {
+                            System.out.println(" unexpected position but continue searching for pts=" + skipToPts);
+                            res = -11;
+                        }
+                    }
+                    if (res >= 0) {
+                        System.out.println(" OK!");
+                        videoConsumer.accept(frameOf(frameHolder.getPixels()));
+                        skipToPts = -1;
+                    }
                 }
+                System.out.println();
                 return res;
             }
 
@@ -748,6 +774,20 @@ public class FFMpegVideoLib implements IVideoLib {
                 AVCodec codec = libavcodec.avcodec_find_decoder(codecCtx.codec_id.get());
                 double framerate = (double)avstream.avg_frame_rate.num.get() / avstream.avg_frame_rate.den.get();
                 return new VideoStreamProperties(codec.name.get(), framerate, duration, frames, width, height);
+            }
+            
+            @Override
+            public IDecoderVideoStream seek(long timestamp) {
+                
+                long cn = codecCtx.time_base.num.get();
+                long cd = codecCtx.time_base.den.get();
+                
+                long pts = timestamp * cn * avstream.time_base.den.get() * codecCtx.ticks_per_frame.get() / cd / avstream.time_base.num.get();
+                System.out.println("seeking to frame " + timestamp + " pts=" + pts);
+                
+                checkcode(libavformat.av_seek_frame(formatCtx, this.index, pts, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD));
+                this.skipToPts  = pts;
+                return this;
             }
             
         }

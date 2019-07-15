@@ -125,8 +125,9 @@ class FFMpegNative {
                                 Pointer[] decoder_ret,
                                 int flags);
         
-        int av_read_frame(AVFormatContext contexxt, AVPacket pkt);
+        int av_read_frame(AVFormatContext context, AVPacket pkt);
         
+        int av_seek_frame(AVFormatContext context, int stream_index, long timestamp, int flags);
         
     }
 

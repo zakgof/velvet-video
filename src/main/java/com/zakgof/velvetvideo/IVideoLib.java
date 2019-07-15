@@ -86,6 +86,8 @@ public interface IVideoLib {
 
         Map<String, String> metadata();
         IVideoStreamProperties properties();
+
+        IDecoderVideoStream seek(long frame);
     }
     
     interface IFrame {
