@@ -10,51 +10,22 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
+import com.zakgof.velvetvideo.IVideoLib.Direction;
 import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IMuxer;
 
-public class EncodeDecodeTest extends VelvetVideoTest {
+public class GenericEncodeDecodeTest extends VelvetVideoTest {
     
     private static final int FRAMES = 16;
 
-    
-    @Disabled
-    @ParameterizedTest
-    @ValueSource(strings = {"mpeg4", "libx264", "libx265"})
-    public void testCodeclist(String codec) throws IOException {
-        List<String> codecs = lib.codecs();
+    protected void codeclist(String codec) throws IOException {
+        List<String> codecs = lib.codecs(Direction.Encode);
         Assertions.assertTrue(codecs.contains(codec));
     }
 
-    @ParameterizedTest
-    @CsvSource({
-        "mpeg4,        avi",
-        "libx264,      avi",
-        "mpeg2video,   avi",
-        "mpeg1video,   avi",
-        "mjpeg,        avi",
-        "libxvid,      avi",
-        
-        "mpeg4,        mp4",
-        "libx264,      mp4",
-        "libx265,      mp4",
-        "libvpx-vp9,   mp4",
-
-        "mpeg4,        matroska",
-        "libx264,      matroska",
-        "mpeg2video,   matroska",
-        "mpeg1video,   matroska",
-        "mjpeg,        matroska",
-        "libxvid,      matroska",
-        "libtheora,    matroska",
-    })
-    public void testEncodeDecodeCompare(String codec, String format) throws IOException {        
+ 
+    protected void encodeDecodeCompare(String codec, String format) throws IOException {  
         
         
         Path file = dir.resolve(codec + "." + format);
@@ -62,7 +33,7 @@ public class EncodeDecodeTest extends VelvetVideoTest {
 
         BufferedImage[] orig = new BufferedImage[FRAMES];
         try (IMuxer muxer = lib.muxer(format).video("dflt", 
-            lib.encoder(codec).bitrate(30000).framerate(30)).build(file.toFile())) {
+            lib.encoder(codec).bitrate(3000000).framerate(30).enableExperimental()).build(file.toFile())) {
             for (int i=0; i<orig.length; i++) {
                 BufferedImage image = colorImage(i);
                 muxer.video("dflt").encode(image, i);
@@ -93,7 +64,6 @@ public class EncodeDecodeTest extends VelvetVideoTest {
         }
     }
     
-    @Test
     public void testEncodeDecodeTwoStreams() throws IOException {    
     
         Path file = dir.resolve("two.mp4");

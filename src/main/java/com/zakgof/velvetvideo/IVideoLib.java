@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 
 public interface IVideoLib {
 
-    List<String> codecs();
+    List<String> codecs(Direction dir);
 
     IEncoder.IBuilder encoder(String format);
 
@@ -29,6 +29,8 @@ public interface IVideoLib {
             IBuilder param(String key, String value);
             
             IBuilder metadata(String key, String value);
+            
+            IBuilder enableExperimental();
 
             // IEncoder build(OutputStream output);
         }
@@ -125,6 +127,10 @@ public interface IVideoLib {
         void close();
     }
 
-    
+    enum Direction {
+        Encode,
+        Decode,
+        All
+    }
 
 }

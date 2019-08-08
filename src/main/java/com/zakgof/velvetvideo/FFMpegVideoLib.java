@@ -85,6 +85,7 @@ public class FFMpegVideoLib implements IVideoLib {
             int len = 0;
             for (int i=0; i<512; i++) if (bts[i] == 0) len = i;
             String s = new String(bts, 0, len);
+            System.err.println("FFMPEG error " + code + " : "+ s);
             throw new VelvetVideoException("FFMPEG error " + code + " : "+ s);
         }
         return code;
@@ -98,14 +99,26 @@ public class FFMpegVideoLib implements IVideoLib {
     }
 
     @Override
-    public List<String> codecs() {
+    public List<String> codecs(Direction dir) {
         PointerByReference ptr = new PointerByReference();
         AVCodec codec;
         List<String> codecs = new ArrayList<>();
         while ((codec = libavcodec.av_codec_iterate(ptr)) != null) {
-            codecs.add(codec.name.get());
+            
+            if (matches(codec, dir)) {            
+                codecs.add(codec.name.get());
+            }
         }
         return codecs;
+    }
+
+    private boolean matches(AVCodec codec, Direction dir) {
+        switch (dir) {
+            case Decode: return libavcodec.av_codec_is_decoder(codec) != 0;
+            case Encode: return libavcodec.av_codec_is_encoder(codec) != 0;
+            case All: return true;
+        }
+        return false;
     }
 
     @Override
@@ -130,6 +143,9 @@ public class FFMpegVideoLib implements IVideoLib {
         ctx.pix_fmt.set(firstFormat); // TODO ?
         ctx.width.set(640); // TODO !!!
         ctx.height.set(480);
+        if (builder.enableExperimental) {
+            ctx.strict_std_compliance.set(-2);
+        }
         Pointer[] opts = createDictionary(builder.params);
         checkcode(libavcodec.avcodec_open2(ctx, codec, opts));
         
@@ -206,6 +222,9 @@ public class FFMpegVideoLib implements IVideoLib {
 
     private AVStream createVideoStream(AVFormatContext formatCtx, EncoderBuilderImpl builder) {
         AVCodec codec = libavcodec.avcodec_find_encoder_by_name(builder.codec);
+        if (codec == null) {
+            throw new VelvetVideoException("Unknown video codec: " + builder.codec);
+        }
         AVStream stream = libavformat.avformat_new_stream(formatCtx, codec);
         
         AVCodecContext codecContext = stream.codec.get();
@@ -282,6 +301,7 @@ public class FFMpegVideoLib implements IVideoLib {
         private int bitrate = 400000;
         private Map<String, String> params = new HashMap<>();
         private Map<String, String> metadata = new HashMap<>();
+        private boolean enableExperimental;
 
         public EncoderBuilderImpl(String codec) {
             this.codec = codec;
@@ -311,6 +331,12 @@ public class FFMpegVideoLib implements IVideoLib {
             metadata.put(key, value);
             return this;
         }
+        
+        @Override
+        public IBuilder enableExperimental() {
+            this.enableExperimental = true;
+            return this;
+        }
 
 //        private EncoderImpl build(IPacketStream stream) {
 //            return new EncoderImpl(stream, this);      
@@ -333,21 +359,19 @@ public class FFMpegVideoLib implements IVideoLib {
         private final int containerTimeBaseNum;
         private final int containerTimeBaseDen;
         private final int streamIndex;
-        private EncoderBuilderImpl builder;
         private Consumer<AVPacket> output;
 
         private EncoderImpl(Consumer<AVPacket> output, EncoderBuilderImpl builder) {            
-            this(builder, output, createCodecContext(builder), builder.timebaseNum, builder.timebaseDen, 0);
+            this(output, createCodecContext(builder), builder.timebaseNum, builder.timebaseDen, 0);
         }
         
-        private EncoderImpl(EncoderBuilderImpl builder, Consumer<AVPacket> output, AVCodecContext codecCtx, int containerTimeBaseNum, int containerTimeBaseDen, int streamIndex) {
+        private EncoderImpl(Consumer<AVPacket> output, AVCodecContext codecCtx, int containerTimeBaseNum, int containerTimeBaseDen, int streamIndex) {
             this.output = output;            
             this.codecCtx = codecCtx;
             this.containerTimeBaseNum = containerTimeBaseNum;
             this.containerTimeBaseDen = containerTimeBaseDen;
             this.packet = libavcodec.av_packet_alloc(); // TODO free
             this.streamIndex = streamIndex;
-            this.builder = builder;
         }       
 
         @Override
@@ -371,6 +395,7 @@ public class FFMpegVideoLib implements IVideoLib {
         }
 
         private void encodeFrame(AVFrame frame, AVPacket packet) {
+            System.err.println(frame == null ? ">>> flush  the encoder" : ">>> send frame to encoder " + frame.pts.get());
             checkcode(libavcodec.avcodec_send_frame(codecCtx, frame));
             for (;;) {
                 libavcodec.av_init_packet(packet);
@@ -378,15 +403,16 @@ public class FFMpegVideoLib implements IVideoLib {
                 packet.size.set(0);
 
                 int res = libavcodec.avcodec_receive_packet(codecCtx, packet);
-                // System.err.println("  codec returns : " + res);
                 if (res == AVERROR_EAGAIN || res == AVERROR_EOF)
                     break;
                 checkcode(res);
                 packet.stream_index.set(streamIndex);
                 fixPacketPtsDts(packet);
-                // System.err.println("  sending to muxer : " + packet.stream_index.get() + "   " + packet.pts.get() + "/" + packet.dts.get());
+                
+                System.err.println("<<< decoder returned packet " + packet.pts.get() + " / " + packet.pts.get());
+                
                 output.accept(packet);
-                libavcodec.av_packet_unref(packet);
+                // libavcodec.av_packet_unref(packet);
             }
         
             // 
@@ -479,13 +505,13 @@ public class FFMpegVideoLib implements IVideoLib {
          
             checkcode(libavformat.avformat_write_header(formatCtx, null));
             
-            Consumer<AVPacket> packetStream = packet -> checkcode(libavformat.av_interleaved_write_frame(formatCtx, packet));
+            Consumer<AVPacket> packetStream = packet -> checkcode(libavformat.av_write_frame(formatCtx, packet));
             
             this.videoStreams = streams.entrySet().stream()
                .collect(Collectors.toMap(Entry::getKey, entry -> {
                    AVStream stream = entry.getValue();
                    AVCodecContext codecCtx = stream.codec.get();
-                   return new EncoderImpl((EncoderBuilderImpl) builder.videos.get(entry.getKey()), packetStream, codecCtx, stream.time_base.num.get(), stream.time_base.den.get(), stream.index.get());
+                   return new EncoderImpl(packetStream, codecCtx, stream.time_base.num.get(), stream.time_base.den.get(), stream.index.get());
                }));
             
         }
@@ -517,7 +543,7 @@ public class FFMpegVideoLib implements IVideoLib {
                 encoder.flush();
             }
             // flush muxer         
-            checkcode(libavformat.av_interleaved_write_frame(formatCtx, null));
+            checkcode(libavformat.av_write_frame(formatCtx, null));
 
             checkcode(libavformat.av_write_trailer(formatCtx));
             // dispose resources
@@ -602,7 +628,8 @@ public class FFMpegVideoLib implements IVideoLib {
                 Pointer mem = pointer.getPointer(i * pointer.getRuntime().addressSize());
                 AVStream avstream = JNRHelper.struct(AVStream.class, mem);
                 if (avstream.codec.get().codec_type.get() == AVMEDIA_TYPE_VIDEO) {
-                     DecoderVideoStreamImpl decoder = new DecoderVideoStreamImpl(avstream, defaultName(avstream, i));
+                    avstream.codec.get().strict_std_compliance.set(-2);
+                    DecoderVideoStreamImpl decoder = new DecoderVideoStreamImpl(avstream, defaultName(avstream, i));
                     streams.add(decoder);
                     indexToVideoStream.put(i, decoder);
                 }
@@ -729,26 +756,24 @@ public class FFMpegVideoLib implements IVideoLib {
                     this.frameHolder = new FrameHolder(codecCtx.width.get(), codecCtx.height.get(), codecCtx.pix_fmt.get(), AVPixelFormat.AV_PIX_FMT_BGR24, false);
                 }
                 res = libavcodec.avcodec_receive_frame(codecCtx, frameHolder.frame);
-                System.out.print("Decoding packet: " + res);
+                // System.out.print("Decoding packet: " + res);
                 if (res >=0) {
                     long pts = frameHolder.frame.pts.get();
-                    System.out.print(" got frame pts=" + pts);
+                    // System.out.print(" got frame pts=" + pts);
                     if (skipToPts != -1) {
                         if (pts < skipToPts) {
-                            System.out.println(" but need to skip more to pts=" + skipToPts);
+                            // System.out.println(" but need to skip more to pts=" + skipToPts);
                             res = -11;
                         } else if (pts > skipToPts) {
-                            System.out.println(" unexpected position but continue searching for pts=" + skipToPts);
+                            // System.out.println(" unexpected position but continue searching for pts=" + skipToPts);
                             res = -11;
                         }
                     }
                     if (res >= 0) {
-                        System.out.println(" OK!");
                         videoConsumer.accept(frameOf(frameHolder.getPixels()));
                         skipToPts = -1;
                     }
                 }
-                System.out.println();
                 return res;
             }
 
