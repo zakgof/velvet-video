@@ -5,7 +5,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 
@@ -19,9 +22,12 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
     
     private static final int FRAMES = 16;
 
-    protected void codeclist(String codec) throws IOException {
+    protected void codeclist(Collection<String> expectedCodecs) throws IOException {
         List<String> codecs = lib.codecs(Direction.Encode);
-        Assertions.assertTrue(codecs.contains(codec));
+        System.err.println(codecs);
+        Set<String> codecSet = new HashSet<>(expectedCodecs);
+        codecSet.removeAll(codecs);
+        Assertions.assertTrue(codecSet.isEmpty(), "Missing codecs: " + codecSet);
     }
 
  

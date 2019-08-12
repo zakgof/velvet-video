@@ -1,17 +1,17 @@
 package com.zakgof.velvetvideo;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 public class FreeEncodeDecodeTest extends GenericEncodeDecodeTest {
     
-    @ParameterizedTest
-    @ValueSource(strings = {"libvpx", "libvpx-vp9", "libaom-av1"})
-    public void testCodeclist(String codec) throws IOException {
-        codeclist(codec);
+    public void testCodeclist() throws IOException {
+        List<String> expectedCodecs = Arrays.asList("libvpx", "libvpx-vp9", "libaom-av1");
+        codeclist(expectedCodecs);
     }
 
     @ParameterizedTest
