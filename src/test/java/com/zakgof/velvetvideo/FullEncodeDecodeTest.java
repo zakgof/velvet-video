@@ -27,9 +27,15 @@ public class FullEncodeDecodeTest extends GenericEncodeDecodeTest {
          "msmpeg4v2,    matroska",
          
          "libx264,      mp4",
-      // "libx264,      matroska", // FAIL - Invalid data
          "libx264,      avi",
          "libx264,      mov",
+     //  "libx264,      matroska", // FAIL - Invalid data
+         
+         "libopenh264,  avi",
+         "libopenh264,  mov",
+         "libopenh264,  mp4",
+     //  "libopenh264,  matroska", // FAIL - Invalid data
+         
          "libx265,      mp4",
          "libx265,      matroska",
          "wmv1,         avi",
