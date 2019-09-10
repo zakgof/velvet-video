@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
-import java.net.URI;
+import java.net.JarURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.zip.ZipFile;
 
@@ -21,25 +23,39 @@ import jnr.ffi.provider.ParameterFlags;
 class JNRHelper {
 
     private static String PLATFORM = getPlatform();
+    private static File extractionDir = createExtractionDirectory();
+
+	private static File createExtractionDirectory() {
+		try {
+			return Files.createTempDirectory("velvet-video-").toFile(); // TODO
+		} catch (IOException e) {
+			throw new VelvetVideoException("Cannot create a dir for extracting native libraries.");
+		}
+	}
 
     static <L> L load(Class<L> clazz, String libName) {
         
         try {
-            URI uri = JNRHelper.class.getProtectionDomain().getCodeSource().getLocation().toURI();
-            File location = new File(uri);
-            boolean isJar = location.isFile();
-            File dir = isJar ? location.getParentFile() : new File(location, PLATFORM);
-            Platform nativePlatform = Platform.getNativePlatform();
+        	
+        	Platform nativePlatform = Platform.getNativePlatform();
             String libfile = nativePlatform.mapLibraryName(libName);
-            String libPath = nativePlatform.locateLibrary(libName, Arrays.asList(dir.toString()));
+        	String folder = "binaries/" + PLATFORM + "/";
+			String path = folder + libfile;
+			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
+        	if (resource == null) {
+        		throw new VelvetVideoException("Cannot locate native library " + libfile + ". Make sure that velvet-video-natives in on classpath.");
+        	}
+			File location = locationFor(resource); 
+            boolean isJar = location.isFile();
+            String libPath = nativePlatform.locateLibrary(libName, Arrays.asList(extractionDir.toString()));
             if (libPath.equals(libfile) && isJar) {
                 try (ZipFile zif = new ZipFile(location)) {
-                    zif.stream().filter(zipEntry -> !zipEntry.isDirectory() && zipEntry.getName().startsWith(PLATFORM))
+                    zif.stream().filter(zipEntry -> !zipEntry.isDirectory() && zipEntry.getName().startsWith(folder))
                         .forEach(zipEntry -> {
-                            String rawfilename = zipEntry.getName().split("/")[1];
-                            System.err.println("Extracting " + zipEntry + " to " + new File(dir, rawfilename));
+                            String rawfilename = zipEntry.getName().split("/")[2];
+                            System.err.println("Extracting " + zipEntry + " to " + new File(extractionDir, rawfilename));
                             try (InputStream inputStream = zif.getInputStream(zipEntry)) {
-                                FileUtils.copyInputStreamToFile(inputStream, new File(dir, rawfilename));
+                                FileUtils.copyInputStreamToFile(inputStream, new File(extractionDir, rawfilename));
                             } catch (IOException e) {
                                 throw new VelvetVideoException("Error extracting ffmpeg native libraries");
                             }
@@ -48,13 +64,29 @@ class JNRHelper {
                     throw new VelvetVideoException("Error extracting ffmpeg native libraries");
                 }
             }
-            return LibraryLoader.create(clazz).search(dir.toString()).load(libName);
-        } catch(URISyntaxException e) {
-            throw new VelvetVideoException("Error locating ffmpeg native libraries");
+            L lib = LibraryLoader.create(clazz).search(extractionDir.toString()).load(libName);
+			return lib;
+        } catch(UnsatisfiedLinkError e) {
+            throw new VelvetVideoException("Error loading native libraries. Make sure that velvet-video-natives in on classpath");
         }
     }
 
-    private static String getPlatform() {
+	private static File locationFor(URL url) {
+		try {
+			if (url.toString().startsWith("jar:file:")) {
+
+				JarURLConnection connection = (JarURLConnection) url.openConnection();
+				final URL jarurl = connection.getJarFileURL();
+				String zipFile = jarurl.getFile();
+				return new File(zipFile);
+			}
+			return new File(url.toURI());
+		} catch (URISyntaxException | IOException e) {
+			throw new VelvetVideoException("Error locating ffmpeg native libraries: " + url);
+		}
+	}
+
+	private static String getPlatform() {
         String os = System.getProperty("os.name").toLowerCase();
         String arch = System.getProperty("os.arch").toLowerCase();
         if (os.contains("windows") && arch.contains("64")) {          
