@@ -13,19 +13,19 @@ To use `velvet-video` add the core dependency plus an appropriate native FFmpeg 
 
 The choice for native package is:
 
-- velvet-video-natives:free
--- only royalty-free components are included
--- encoders/decoders: Google VP8 and VP9, AOM av1
--- muxers/demuxers: webm, mkv, ogg
+- `velvet-video-natives:free`
+   - only royalty-free components are included
+   - encoders/decoders: Google VP8 and VP9, AOM av1
+   - muxers/demuxers: webm, mkv, ogg
 
-- velvet-video-natives:full
--- maximum FFmpeg functionality included
--- the included components use patented technologies and may require royalty fees for commercial usage
+- `velvet-video-natives:full`
+   - maximum FFmpeg functionality included
+   - the included components use patented technologies and may require royalty fees for commercial usage
 
 ````groovy
 dependencies {
     compile 'com.github.zakgof:velvet-video-core:0.0.1'
-    compile 'com.github.zakgof:velvet-video-natives:free:0.0.1'
+    compile 'com.github.zakgof:velvet-video-natives:0.0.1.free'
 }
 ````
 
