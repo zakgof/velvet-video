@@ -9,9 +9,9 @@ Supported platforms:
 
 ## Setup
 
-To use `velvet-video`, add the core dependency plus an appropriate native FFmpeg components package.
+To use `velvet-video` add the core dependency plus an appropriate native FFmpeg components package.
 
-The choice is:
+The choice for native package is:
 
 - velvet-video-natives:free
 -- only royalty-free components are included
@@ -44,16 +44,18 @@ dependencies {
              muxer.video("video1").encode(image1, 0);
              muxer.video("video1").encode(image2, 1);
              muxer.video("video1").encode(image3, 2);
-      }
-      
-
+      }      
 ````
+
+### Playing a video file
+
+See https://github.com/zakgof/velvet-video-player
 
 ## License
 
 `velvet-video-core` is dual-licensed under Apache 2.0 and GPL 3.0 (or any later version).
 
-To comply with the FFMpeg components license present bundles into `velvet-video-natives`, choose Apache-2.0 when using with `velvet-video-natives:free` or `GPL-3.0-or-later` when using with `velvet-video-natives:full`
+To comply with the FFMpeg components license present bundles into `velvet-video-natives`, choose `Apache-2.0` when using with `velvet-video-natives:free` or `GPL-3.0-or-later` when using with `velvet-video-natives:full`
 
 `SPDX-License-Identifier: Apache-2.0 OR GPL-3.0-or-later`
 
