@@ -5,7 +5,7 @@ velvet-video is using FFmpeg libraries via JNR.
 
 Supported platforms:    
  - Windows 64 bit
- - Linux 64 bit
+ - Linux 64 bit (coming soon)
 
 ## Setup
 
