@@ -743,8 +743,8 @@ public class FFMpegVideoLib implements IVideoLib {
                 checkcode(libavcodec.avcodec_open2(codecCtx, codec, null));
             }
 
-            private IFrame frameOf(BufferedImage bi) {
-                long nanostamp = frameHolder.frame.pts.get() * 1000000000L * codecCtx.time_base.num.get() / codecCtx.time_base.den.get(); 
+            private IFrame frameOf(BufferedImage bi) {                
+                long nanostamp = frameHolder.frame.pts.get() * 1000000000L * avstream.time_base.num.get() / avstream.time_base.den.get();
                 return new Frame(bi, nanostamp, this);
             }
 
