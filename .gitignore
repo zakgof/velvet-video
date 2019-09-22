@@ -6,4 +6,5 @@
 .classpath
 !gradle-wrapper.jar
 .gradletasknamecache
+lombok.config
 

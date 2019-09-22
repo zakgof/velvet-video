@@ -20,6 +20,8 @@ public interface IVideoLib {
     interface IEncoder {
 
         void encode(BufferedImage bi, long pts);
+        
+        void writeRaw(byte[] packetData);
 
         interface IBuilder {
             IBuilder framerate(int framerate);
@@ -61,7 +63,6 @@ public interface IVideoLib {
         void close();
 
         IEncoder video(String name);
-
     }
 
     IDemuxer demuxer(InputStream is);
@@ -78,7 +79,8 @@ public interface IVideoLib {
         void close();
         List<? extends IDecoderVideoStream> videos();
         boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer);
-        Map<String, String> metadata(); 
+        Map<String, String> metadata();
+        IMuxerProperties properties();
     }
 
     interface IDecoderVideoStream {
@@ -97,7 +99,10 @@ public interface IVideoLib {
         BufferedImage image();
         long nanostamp();
     }
-
+    
+    interface IMuxerProperties {
+        String format();
+    }
     
     interface IVideoStreamProperties {
         String codec();

@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ import com.zakgof.velvetvideo.FFMpegNative.SwsContext;
 import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoLib.IEncoder.IBuilder;
 import com.zakgof.velvetvideo.IVideoLib.IFrame;
+import com.zakgof.velvetvideo.IVideoLib.IMuxerProperties;
 import com.zakgof.velvetvideo.IVideoLib.IVideoStreamProperties;
 
 import jnr.ffi.Pointer;
@@ -409,7 +411,7 @@ public class FFMpegVideoLib implements IVideoLib {
                 packet.stream_index.set(streamIndex);
                 fixPacketPtsDts(packet);
                 
-                System.err.println("<<< decoder returned packet " + packet.pts.get() + " / " + packet.pts.get());
+                System.err.println("<<< encoder returned packet " + packet.pts.get() + " / " + packet.pts.get());
                 
                 output.accept(packet);
                 // libavcodec.av_packet_unref(packet);
@@ -436,6 +438,20 @@ public class FFMpegVideoLib implements IVideoLib {
         private void flush() {
             encodeFrame(null, packet);
         }
+
+		@Override
+		public void writeRaw(byte[] packetData) {
+			for (;;) {
+				// TODO !!! free
+				Pointer pointer = Pointer.wrap(Runtime.getSystemRuntime(), ByteBuffer.wrap(packetData));
+                libavcodec.av_init_packet(packet);
+                packet.data.set(pointer);
+                packet.size.set(packetData.length);
+
+                packet.stream_index.set(streamIndex);
+                fixPacketPtsDts(packet);
+            }
+		}
 
     }
 
@@ -599,7 +615,6 @@ public class FFMpegVideoLib implements IVideoLib {
     }
     
     private class DemuxerImpl implements IDemuxer {
-        
         
         private AVFormatContext formatCtx;
         private ISeekableInput input;
@@ -827,6 +842,11 @@ public class FFMpegVideoLib implements IVideoLib {
             Pointer dictionary = formatCtx.metadata.get();
             return dictionaryToMap(dictionary);
         }
+        
+        @Override
+        public IMuxerProperties properties() {
+        	return new MuxerProperties(formatCtx.oformat.get().name.get());
+        }
 
         @Override
         public void close() {
@@ -843,6 +863,12 @@ class Frame implements IFrame {
     private final BufferedImage image;
     private final long nanostamp;
     private final IDecoderVideoStream stream;
+}
+
+@Accessors(fluent = true)
+@Value
+class MuxerProperties implements IMuxerProperties {
+    private final String format;
 }
 
 @Accessors(fluent = true)
