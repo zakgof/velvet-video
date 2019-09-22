@@ -92,6 +92,8 @@ public interface IVideoLib {
         IVideoStreamProperties properties();
 
         IDecoderVideoStream seek(long frame);
+
+		byte[] nextRawPacket();
     }
     
     interface IFrame {

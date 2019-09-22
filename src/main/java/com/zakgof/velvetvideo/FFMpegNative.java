@@ -472,7 +472,7 @@ class FFMpegNative {
         }
         
         Pointer av_class = new Pointer();
-        Pointer iformat = new Pointer();
+        StructRef<AVInputFormat> iformat = new StructRef<>(AVInputFormat.class);
         StructRef<AVOutputFormat> oformat = new StructRef<>(AVOutputFormat.class);
         Pointer priv_data = new Pointer();
 
