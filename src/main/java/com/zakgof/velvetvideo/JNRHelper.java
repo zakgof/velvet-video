@@ -34,9 +34,9 @@ class JNRHelper {
 	}
 
     static <L> L load(Class<L> clazz, String libName) {
-        
+
         try {
-        	
+
         	Platform nativePlatform = Platform.getNativePlatform();
             String libfile = nativePlatform.mapLibraryName(libName);
         	String folder = "binaries/" + PLATFORM + "/";
@@ -45,7 +45,7 @@ class JNRHelper {
         	if (resource == null) {
         		throw new VelvetVideoException("Cannot locate native library " + libfile + ". Make sure that velvet-video-natives in on classpath.");
         	}
-			File location = locationFor(resource); 
+			File location = locationFor(resource);
             boolean isJar = location.isFile();
             String libPath = nativePlatform.locateLibrary(libName, Arrays.asList(extractionDir.toString()));
             if (libPath.equals(libfile) && isJar) {
@@ -89,7 +89,7 @@ class JNRHelper {
 	private static String getPlatform() {
         String os = System.getProperty("os.name").toLowerCase();
         String arch = System.getProperty("os.arch").toLowerCase();
-        if (os.contains("windows") && arch.contains("64")) {          
+        if (os.contains("windows") && arch.contains("64")) {
             return "windows64";
         } else if (os.contains("linux") && arch.contains("64")) {
             return "linux64";

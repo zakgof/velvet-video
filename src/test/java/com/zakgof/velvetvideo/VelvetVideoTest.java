@@ -78,7 +78,7 @@ public class VelvetVideoTest {
 		}
 		return diff / bytes1.length;
 	}
-	
+
 	protected void assertEqual(BufferedImage im1, BufferedImage im2) {
 		double diff = diff(im1, im2);
 		Assertions.assertEquals(0, diff, 1.0);

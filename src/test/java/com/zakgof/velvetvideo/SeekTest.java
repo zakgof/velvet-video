@@ -43,7 +43,7 @@ public class SeekTest extends VelvetVideoTest {
 			seekAndVerify(rest1, "dflt", demuxer, 0);
 		}
 	}
-	
+
 	@Test
 	public void testSeekInTwoStreamVideo() throws IOException {
 		File file = dir.resolve("seek2.mp4").toFile();
@@ -52,7 +52,7 @@ public class SeekTest extends VelvetVideoTest {
 		createTwoStreamVideo(file, FRAMES);
 		List<BufferedImage> restcolor = new ArrayList<>(FRAMES);
 		List<BufferedImage> restbw = new ArrayList<>(FRAMES);
-		
+
 		try (IDemuxer demuxer = lib.demuxer(file)) {
 			for (IDecodedPacket packet : demuxer) {
 				String streamName = packet.video().stream().name();

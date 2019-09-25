@@ -28,7 +28,7 @@ class FFMpegNative {
         void av_packet_unref(AVPacket packet);
 
         int avcodec_receive_packet(AVCodecContext avcontext, AVPacket packet);
-        int avcodec_open2x();        
+        int avcodec_open2x();
 
         AVCodecContext avcodec_alloc_context3(AVCodec codec);
 
@@ -42,27 +42,27 @@ class FFMpegNative {
         int avcodec_encode_video2(AVCodecContext context, AVPacket packet, @In AVFrame frame, @Out int[] got_output);
 
         // void av_free_packet(AVPacket packet);
-        
-        
+
+
         int avcodec_parameters_from_context(Pointer par, @In AVCodecContext codec);
-        
+
         int avcodec_parameters_to_context(@Out AVCodecContext codec, Pointer par);
-        
+
         Pointer avcodec_parameters_alloc();
-        
+
         void avcodec_parameters_free(PointerByReference par);
-        
+
         int avcodec_receive_frame(AVCodecContext context, AVFrame frame);
-        
+
         int avcodec_send_packet(AVCodecContext context, AVPacket packet);
-        
+
         AVCodec avcodec_find_decoder(int id);
-        
+
         AVCodec av_codec_iterate(PointerByReference opaque);
-        
+
         int av_codec_is_encoder(AVCodec codec);
         int av_codec_is_decoder(AVCodec codec);
-                                       
+
 
     }
 
@@ -76,11 +76,11 @@ class FFMpegNative {
         int av_dict_set(Pointer[] pm, String key, String value, int flags);
 
         int av_strerror(int errnum, Pointer errbuf, int errbuf_size);
-        
+
         int av_log_set_level(int val);
-        
+
         Pointer av_malloc(@size_t int size);
-        
+
         AVDictionaryEntry av_dict_get(@In Pointer dictionary, @In String key, @In AVDictionaryEntry prev, int flags);
     }
 
@@ -90,21 +90,21 @@ class FFMpegNative {
         int avformat_write_header(AVFormatContext ctx, Pointer[] dictionary);
         int av_write_trailer(AVFormatContext ctx);
         void avformat_free_context(AVFormatContext ctx);
-        
+
         AVOutputFormat av_guess_format(String short_name, String filename, String mime_type);
-        
+
         int av_write_frame(AVFormatContext context, AVPacket packet);
         int av_interleaved_write_frame(AVFormatContext ctx, AVPacket packet);
-        
+
         AVIOContext avio_alloc_context(Pointer buffer, int buffer_size, int write_flag, Pointer opaque,
                                        IPacketIO reader,
                                        IPacketIO writer,
                                        ISeeker seeker);
-        
+
         void avio_context_free(PointerByReference avioContext);
-        
+
         int avformat_open_input(PointerByReference ctx, String url, AVInputFormat fmt, Pointer[] options);
-        
+
         interface IPacketIO {
             @Delegate @StdCall int read_packet(Pointer opaque, Pointer buf, int buf_size);
         }
@@ -112,26 +112,26 @@ class FFMpegNative {
         interface ISeeker {
             @Delegate @StdCall int seek (Pointer opaque, int offset, int whence);
         }
-        
+
         interface ICustomAvioCallback extends IPacketIO, ISeeker {
         }
 
         void av_dump_format(AVFormatContext context, int i, String string, int j);
-        
+
         int avio_open(PointerByReference pbref, String url, int flags);
-        
+
         AVFormatContext avformat_alloc_context();
-        
+
         int avformat_find_stream_info(AVFormatContext context, Pointer[] options);
-        
+
         int av_find_best_stream(AVFormatContext context, int type, int wanted_stream_nb, int related_stream,
                                 Pointer[] decoder_ret,
                                 int flags);
-        
+
         int av_read_frame(AVFormatContext context, AVPacket pkt);
-        
+
         int av_seek_frame(AVFormatContext context, int stream_index, long timestamp, int flags);
-        
+
     }
 
     public static class AVPacket extends Struct {
@@ -193,7 +193,7 @@ class FFMpegNative {
         public Float i_quant_factor = new Float();
         public Float i_quant_offset = new Float();
         public Float lumi_masking = new Float();
-        
+
         public Float temporal_cplx_masking = new Float();
         public Float spatial_cplx_masking = new Float();
         public Float p_masking = new Float();
@@ -217,8 +217,8 @@ class FFMpegNative {
         Signed32 slice_flags = new Signed32();
         Signed32 mb_decision = new Signed32();
 
-        Pointer intra_matrix = new Pointer();      
-        Pointer inter_matrix = new Pointer();   
+        Pointer intra_matrix = new Pointer();
+        Pointer inter_matrix = new Pointer();
         Signed32 scenechange_threshold = new Signed32();
         Signed32 noise_reduction = new Signed32();
         Signed32 intra_dc_precision = new Signed32();
@@ -237,7 +237,7 @@ class FFMpegNative {
         Signed32 color_primaries = new Signed32();
         Signed32 color_trc = new Signed32();
         Signed32 colorspace = new Signed32();
-        Signed32 color_range = new Signed32(); 
+        Signed32 color_range = new Signed32();
         Signed32 chroma_sample_location = new Signed32();
         Signed32 slices = new Signed32();
         Signed32 field_order = new Signed32(); // OK
@@ -276,23 +276,23 @@ class FFMpegNative {
         public Float rc_max_available_vbv_use = new Float();
         public Float rc_min_vbv_overflow_use = new Float();    // 3.0 ??
         Signed32 rc_initial_buffer_occupancy = new Signed32();
-        
+
         Signed32 coder_type = new Signed32();
         Signed32 context_model = new Signed32();
         Signed32 frame_skip_threshold = new Signed32();
         Signed32 frame_skip_factor = new Signed32();
         Signed32 frame_skip_exp = new Signed32();
         Signed32 frame_skip_cmp = new Signed32(); //13 ?
-     
+
         Signed32 trellis = new Signed32();
-        
+
         Signed32 min_prediction_order = new Signed32(); // -1
         Signed32 max_prediction_order = new Signed32(); // -1
         Signed32 timecode_frame_start = new Signed32(); // -1
-        
+
         Pointer rtp_callback = new Pointer();
         Signed32 rtp_payload_size = new Signed32(); // -1
-        
+
         Signed32 mv_bits = new Signed32();
         Signed32 header_bits = new Signed32();
         Signed32 i_tex_bits = new Signed32();
@@ -302,17 +302,17 @@ class FFMpegNative {
         Signed32 skip_count = new Signed32();
         Signed32 misc_bits = new Signed32();
         Signed32 frame_bits = new Signed32();
-        
+
         Pointer stats_out = new Pointer();    // BAAAAAADDDD !!!
         Pointer stats_in = new Pointer();
         Signed32 workaround_bugs = new Signed32();
         public Signed32 strict_std_compliance = new Signed32();
-        
-        
+
+
 
 
     }
-    
+
     public static class AVCodecParameters extends Struct {
 
         public AVCodecParameters(Runtime runtime) {
@@ -322,19 +322,19 @@ class FFMpegNative {
         public Signed32 codec_type = new Signed32();
         public Signed32 codec_id = new Signed32();
         public int32_t codec_tag = new int32_t();
-        
+
         public Struct.Pointer extradata = new Pointer();
         public Signed32 extradata_size = new Signed32();
         public Signed32 format = new Signed32();
         public int64_t bit_rate = new int64_t();
         public Signed32 bits_per_coded_sample = new Signed32();
         public Signed32 bits_per_raw_sample = new Signed32();
-        
+
         public Signed32 profile = new Signed32();
         public Signed32 level = new Signed32();
         public Signed32 width = new Signed32();
         public Signed32 height = new Signed32();
-        
+
         AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
         Signed32 field_order = new Signed32();
         Signed32 color_range = new Signed32();
@@ -364,7 +364,7 @@ class FFMpegNative {
          * Descriptive name for the codec, meant to be more human readable than name.
          */
         public Struct.String long_name = new UTF8StringRef();
-        
+
         Signed32 type = new Signed32();
         Signed32 id = new Signed32();
         Signed32 capabilities = new Signed32();
@@ -432,7 +432,8 @@ class FFMpegNative {
         AV_PIX_FMT_BGR555BE,  ///< packed BGR 5:5:5, 16bpp, (msb)1X 5B 5G 5R(lsb), big-endian   , X=unused/undefined
         AV_PIX_FMT_BGR555LE;  ///< packed BGR 5:5:5, 16bpp, (msb)1X 5B 5G 5R(lsb), little-endian, X=unused/undefined
 
-        public int intValue() {
+        @Override
+		public int intValue() {
             return ordinal();
         }
     }
@@ -464,13 +465,13 @@ class FFMpegNative {
             super(runtime);
         }
     }
-    
+
     public static class AVFormatContext extends Struct {
 
         public AVFormatContext(Runtime runtime) {
             super(runtime);
         }
-        
+
         Pointer av_class = new Pointer();
         StructRef<AVInputFormat> iformat = new StructRef<>(AVInputFormat.class);
         StructRef<AVOutputFormat> oformat = new StructRef<>(AVOutputFormat.class);
@@ -492,7 +493,7 @@ class FFMpegNative {
         Signed32 ctx_flags = new Signed32();
         Unsigned32 nb_streams = new Unsigned32();
         Pointer streams = new Pointer();
-        
+
         String filename = new Struct.UTF8String(1024);
         String url = new Struct.UTF8StringRef();
         int64_t start_time = new int64_t();
@@ -521,23 +522,23 @@ class FFMpegNative {
         public AVOutputFormat(Runtime runtime) {
             super(runtime);
         }
-        
+
         public Struct.String name = new AsciiStringRef();
         public Struct.String long_name = new AsciiStringRef();
         public Struct.String mime = new AsciiStringRef();
         public Struct.String extensions = new AsciiStringRef();
-     
+
     }
-    
+
     public static class AVInputFormat extends Struct {
         public AVInputFormat(Runtime runtime) {
             super(runtime);
         }
-        
+
         public Struct.String name = new AsciiStringRef();
-        public Struct.String long_name = new AsciiStringRef();     
+        public Struct.String long_name = new AsciiStringRef();
     }
-    
+
     public static class AVIOContext extends Struct {
         public AVIOContext(Runtime runtime) {
             super(runtime);
@@ -548,12 +549,12 @@ class FFMpegNative {
         public AVStream(Runtime runtime) {
             super(runtime);
         }
-        
+
         public Signed32 index = new Signed32();
         public Signed32 id = new Signed32();
-        
+
         public StructRef<AVCodecContext> codec = new StructRef<AVCodecContext>(AVCodecContext.class);
-      
+
         public Pointer priv_data = new Pointer();
         public AVRational time_base = inner(new AVRational(getRuntime()));
 
@@ -583,7 +584,7 @@ class FFMpegNative {
 
         public Pointer codecpar = new Pointer();
         public Pointer info = new Pointer();
-        
+
         public Signed32 pts_wrap_bits = new Signed32();  /**< number of bits in pts (used for wrapping control) */
         public int64_t first_dts = new int64_t();
         public int64_t cur_dts = new int64_t();
@@ -595,7 +596,7 @@ class FFMpegNative {
         public Signed32 need_parsing = new Signed32(); // enum AVStreamParseType need_parsing; TODO
         public Pointer parser = new Pointer();
         public Pointer last_in_packet_buffer = new Pointer();
-      
+
 
         // AVProbeData probe_data;
         public Pointer AVProbeData_filename = new Pointer();
@@ -604,12 +605,12 @@ class FFMpegNative {
         public Pointer AVProbeData_mime_type = new Pointer();
 
     }
-    
+
     public static class AVDictionaryEntry extends Struct {
         public AVDictionaryEntry(Runtime runtime) {
             super(runtime);
         }
-        
+
         public String key = new UTF8StringRef();
         public String value = new UTF8StringRef();
     }

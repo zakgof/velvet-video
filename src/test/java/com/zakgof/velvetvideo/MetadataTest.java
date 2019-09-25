@@ -13,15 +13,15 @@ import com.zakgof.velvetvideo.IVideoLib.IMuxer;
 import com.zakgof.velvetvideo.IVideoLib.IVideoStreamProperties;
 
 public class MetadataTest extends VelvetVideoTest {
-    
+
     @Test
     public void testStreamMetadata() throws IOException {
         Path file = dir.resolve("stream-metadata.mp4");
         System.err.println(file);
         try (IMuxer muxer = lib.muxer("mp4").video("Track 4", lib.encoder("mpeg4")
             .metadata("language", "ukr"))
-            .build(file.toFile())) {            
-            muxer.video("color").encode(colorImage(2), 0);            
+            .build(file.toFile())) {
+            muxer.video("color").encode(colorImage(2), 0);
         }
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
             Map<String, String> restored = demuxer.videos().get(0).metadata();
@@ -37,8 +37,8 @@ public class MetadataTest extends VelvetVideoTest {
         try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4"))
                 .metadata("title", "somemp4video")
                 .metadata("genre", "drama")
-            .build(file.toFile())) {            
-            muxer.video("color").encode(colorImage(2), 0);            
+            .build(file.toFile())) {
+            muxer.video("color").encode(colorImage(2), 0);
         }
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
             Map<String, String> restored = demuxer.metadata();
@@ -46,14 +46,14 @@ public class MetadataTest extends VelvetVideoTest {
             Assertions.assertEquals("drama", restored.get("genre"));
         }
     }
-    
+
     @Test
     public void testVideoStreamProperties() throws IOException {
         Path file = dir.resolve("stream-metadata.mp4");
-        try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4").framerate(25)).build(file.toFile())) {            
+        try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4").framerate(25)).build(file.toFile())) {
             IEncoder encoder = muxer.video("color");
             encoder.encode(colorImage(2), 0);
-            encoder.encode(colorImage(3), 1);   
+            encoder.encode(colorImage(3), 1);
         }
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
             IVideoStreamProperties restored = demuxer.videos().get(0).properties();

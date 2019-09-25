@@ -30,8 +30,8 @@ public class RawTest extends VelvetVideoTest {
 
 		// Remux raw stream to MP4
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			IDecoderVideoStream origStream = demuxer.videoStream("video0"); // TODO: this is bug: stream names are not saved to AVIs 
-			try (IMuxer muxer = lib.muxer("mp4").video("dflt", lib.encoder("libx264")).build(remuxed)) {	
+			IDecoderVideoStream origStream = demuxer.videoStream("video0"); // TODO: this is bug: stream names are not saved to AVIs
+			try (IMuxer muxer = lib.muxer("mp4").video("dflt", lib.encoder("libx264")).build(remuxed)) {
 				byte[] rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
 					muxer.video("dflt").writeRaw(rawPacket);
@@ -48,7 +48,7 @@ public class RawTest extends VelvetVideoTest {
 			}
 		}
 	}
-	
+
 	@Test
 	public void testMergeMp4s() throws IOException {
 		File file = dir.resolve("orig.mp4").toFile();
@@ -59,14 +59,14 @@ public class RawTest extends VelvetVideoTest {
 		createSingleStreamVideo("libx264", "mp4", file, FRAMES);
 		List<BufferedImage> original = loadFrames(file, FRAMES);
 
-		// Remux raw streams 
+		// Remux raw streams
 		int TIMES = 4;
 		try (IMuxer muxer = lib.muxer("mp4")
 		    .video("dflt", lib.encoder("libx264"))
-		    .build(remuxed)) {	
+		    .build(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
 				try (IDemuxer demuxer = lib.demuxer(file)) {
-					IDecoderVideoStream origStream = demuxer.videos().get(0); 
+					IDecoderVideoStream origStream = demuxer.videos().get(0);
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
 						muxer.video("dflt").writeRaw(rawPacket);
@@ -74,7 +74,7 @@ public class RawTest extends VelvetVideoTest {
 				}
 			}
 		}
-		
+
 		// Read and check MP4 frames
 		try (IDemuxer demuxer = lib.demuxer(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
