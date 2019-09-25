@@ -24,8 +24,8 @@ The choice for native package is:
 
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video-core:0.0.1'
-    compile 'com.github.zakgof:velvet-video-natives:0.0.1.free'
+    compile 'com.github.zakgof:velvet-video-core:0.0.2'
+    compile 'com.github.zakgof:velvet-video-natives:0.0.1.full'
 }
 ````
 
@@ -34,20 +34,30 @@ dependencies {
 ### Encode images into a video:
 
 ````java
+    IVideoLib lib = new FFMpegVideoLib();
+    try (IMuxer muxer = lib.muxer("matroska")
+        .video("video1", lib.encoder("av1").bitrate(100000))
+        .build(new File("/some/path/output.mkv"))) {            
+           muxer.video("video1").encode(image1, 0);
+           muxer.video("video1").encode(image2, 1);
+           muxer.video("video1").encode(image3, 2);
+    }      
+````
+### Obtain images from a video:
 
-     IVideoLib lib = new FFMpegVideoLib();
-        
-      try (IMuxer muxer = lib.muxer("matroska")
-         .video("video1", lib.encoder("av1").bitrate(100000))
-         .build(new File("/some/path/output.mkv"))) {            
-
-             muxer.video("video1").encode(image1, 0);
-             muxer.video("video1").encode(image2, 1);
-             muxer.video("video1").encode(image3, 2);
-      }      
+````java
+	IVideoLib lib = new FFMpegVideoLib();
+	try (IDemuxer demuxer = lib.demuxer(new File("/some/path/example.mp4"))) {
+	    IDecoderVideoStream videoStream = demuxer.videos().get(0);
+	    IFrame videoFrame;
+	    while ((videoFrame = videoStream.nextFrame()) != null) {
+	   	    BufferedImage image = videoFrame.image();
+	   	    // Use image as needed...
+	    }
+	}      
 ````
 
-### Playing a video file
+### Play a video file
 
 See https://github.com/zakgof/velvet-video-player
 
