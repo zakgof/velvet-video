@@ -11,12 +11,18 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import com.zakgof.velvetvideo.FFMpegNative.AVCodec;
 import com.zakgof.velvetvideo.FFMpegNative.AVCodecContext;
@@ -499,7 +505,7 @@ public class FFMpegVideoLib implements IVideoLib {
         @Override
         public IMuxer.IBuilder video(String name, IEncoder.IBuilder encoderBuilder) {
             videos.put(name, (EncoderBuilderImpl) encoderBuilder);
-            metadata.put("handler_name", name);
+            encoderBuilder.metadata("handler_name", name);
             return this;
         }
         
@@ -740,6 +746,33 @@ public class FFMpegVideoLib implements IVideoLib {
 			}
 		}
         
+        @Override
+        public Stream<IDecodedPacket> stream() {
+        	// return Stream.generate(this::nextPacket).takeWhile(el -> el != null);
+        	return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator(), Spliterator.ORDERED), false);
+        }
+        
+        @Override
+        public Iterator<IDecodedPacket> iterator() {
+        	return new Iterator<IVideoLib.IDecodedPacket>() {
+        		
+        		private IDecodedPacket next = nextPacket();
+
+				@Override
+				public boolean hasNext() {
+					return next != null;
+				}
+
+				@Override
+				public IDecodedPacket next() {
+					if (next == null)
+						throw new NoSuchElementException();
+					IDecodedPacket ret = next;
+					next = nextPacket();
+					return ret;
+				}
+			};
+        }
 
         @Override
         public boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer) {
@@ -891,7 +924,7 @@ public class FFMpegVideoLib implements IVideoLib {
 			public IFrame nextFrame() {
 				IDecodedPacket packet;
 				while((packet = nextPacket()) != null) {
-					if (packet.isVideo()) {
+					if (packet.isVideo() && packet.video().stream() == this) {
 						return packet.video();
 					}
 				}
@@ -928,6 +961,11 @@ public class FFMpegVideoLib implements IVideoLib {
         @Override
         public List<? extends IDecoderVideoStream> videos() {
             return streams;
+        }
+        
+        @Override
+        public IDecoderVideoStream videoStream(String streamName) {
+        	return streams.stream().filter(vs -> vs.name.equals(streamName)).findFirst().orElse(null);
         }
         
         @Override

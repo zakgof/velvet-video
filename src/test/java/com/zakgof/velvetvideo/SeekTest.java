@@ -3,83 +3,97 @@ package com.zakgof.velvetvideo;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
+import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
 import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
-import com.zakgof.velvetvideo.IVideoLib.IMuxer;
+import com.zakgof.velvetvideo.IVideoLib.IFrame;
 
 public class SeekTest extends VelvetVideoTest {
-    
-    private static final int FRAMES = 10;
 
-    @Test
-    public void testSeek() throws IOException {
-        Path file = dir.resolve("seek.mp4");
-        System.err.println(file);
+	private static final int FRAMES = 10;
 
-        BufferedImage[] orig = new BufferedImage[FRAMES];
-        try (IMuxer muxer = lib.muxer("mp4").video("dflt",
-            lib.encoder("libx264").bitrate(3000000).framerate(30)).build(file.toFile())) {
-            for (int i=0; i<orig.length; i++) {
-                BufferedImage image = colorImage(i);
-                muxer.video("dflt").encode(image, i);
-                orig[i] = image;
-                ImageIO.write(orig[i], "png", new File("c:\\pr\\orig-" + i + ".png"));
-            }
-        }
-        
-        List<BufferedImage> rest1 = new ArrayList<>(FRAMES);
-        
-        try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
-            while(demuxer.nextPacket(f ->  {
-                    System.err.println("saving as " + rest1.size());
-                    try {
-                        ImageIO.write(f.image(), "png", new File("c:\\pr\\rest1-" + rest1.size() + ".png"));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    rest1.add(f.image());
-                }, null));
-        }
-        
-        Assertions.assertEquals(FRAMES, rest1.size());
+	@Test
+	public void testSeek() throws IOException {
+		File file = dir.resolve("seek.mp4").toFile();
+		System.err.println(file);
 
-        try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
-            IDecoderVideoStream videoStream = demuxer.videos().get(0);
-            readAndVerify(rest1, demuxer, 0);
-            readAndVerify(rest1, demuxer, 1);
-            seekAndVerify(rest1, demuxer, videoStream, 6);
-            seekAndVerify(rest1, demuxer, videoStream, 9);
-            seekAndVerify(rest1, demuxer, videoStream, 2);
-            seekAndVerify(rest1, demuxer, videoStream, 5);
-            seekAndVerify(rest1, demuxer, videoStream, 0);
-        }
-    }
+		createSingleStreamVideo("libx264", "mp4", file, FRAMES);
+		List<BufferedImage> rest1 = new ArrayList<>(FRAMES);
 
-    private void seekAndVerify(List<BufferedImage> rest1, IDemuxer demuxer, IDecoderVideoStream videoStream, int timestamp) {
-        videoStream.seek(timestamp);
-        readAndVerify(rest1, demuxer, timestamp);
-    }
+		try (IDemuxer demuxer = lib.demuxer(file)) {
+			for (IDecodedPacket packet : demuxer) {
+				rest1.add(packet.video().image());
+			}
+		}
 
-    private void readAndVerify(List<BufferedImage> rest1, IDemuxer demuxer, int timestamp) {
-        boolean hit[] = {false}; 
-        demuxer.nextPacket(frame -> {
-            BufferedImage restored = frame.image();
-            double diff = diff(restored, rest1.get(timestamp));
-            Assertions.assertEquals(0, diff, 1.0);
-            hit[0] = true;
-        }, null);
-        Assertions.assertTrue(hit[0]);
-    }
-    
+		Assertions.assertEquals(FRAMES, rest1.size());
 
+		try (IDemuxer demuxer = lib.demuxer(file)) {
+			readAndVerify(rest1, "dflt", demuxer, 0);
+			readAndVerify(rest1, "dflt", demuxer, 1);
+			seekAndVerify(rest1, "dflt", demuxer, 6);
+			seekAndVerify(rest1, "dflt", demuxer, 9);
+			seekAndVerify(rest1, "dflt", demuxer, 2);
+			seekAndVerify(rest1, "dflt", demuxer, 5);
+			seekAndVerify(rest1, "dflt", demuxer, 0);
+		}
+	}
+	
+	@Test
+	public void testSeekInTwoStreamVideo() throws IOException {
+		File file = dir.resolve("seek2.mp4").toFile();
+		System.err.println(file);
+
+		createTwoStreamVideo(file, FRAMES);
+		List<BufferedImage> restcolor = new ArrayList<>(FRAMES);
+		List<BufferedImage> restbw = new ArrayList<>(FRAMES);
+		
+		try (IDemuxer demuxer = lib.demuxer(file)) {
+			for (IDecodedPacket packet : demuxer) {
+				String streamName = packet.video().stream().name();
+				if (streamName.equals("color")) {
+					restcolor.add(packet.video().image());
+				} else if (streamName.equals("bw")) {
+					restbw.add(packet.video().image());
+				}
+			}
+		}
+
+		Assertions.assertEquals(FRAMES, restcolor.size());
+		Assertions.assertEquals(FRAMES, restbw.size());
+
+		try (IDemuxer demuxer = lib.demuxer(file)) {
+			readAndVerify(restcolor, "color", demuxer, 0);
+			seekAndVerify(restbw, "bw", demuxer, 9);
+			seekAndVerify(restcolor, "color", demuxer, 6);
+			seekAndVerify(restcolor, "color", demuxer, 9);
+			seekAndVerify(restbw, "bw", demuxer, 1);
+			seekAndVerify(restcolor, "color", demuxer, 2);
+			seekAndVerify(restbw, "bw", demuxer, 1);
+			seekAndVerify(restbw, "bw", demuxer, 4);
+			seekAndVerify(restcolor, "color", demuxer, 5);
+			seekAndVerify(restcolor, "color", demuxer, 0);
+			seekAndVerify(restbw, "bw", demuxer, 7);
+			seekAndVerify(restbw, "bw", demuxer, 0);
+			seekAndVerify(restbw, "bw", demuxer, 3);
+		}
+	}
+
+	private void seekAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, 	int timestamp) {
+		demuxer.videoStream(streamName).seek(timestamp);
+		readAndVerify(rest1, streamName, demuxer, timestamp);
+	}
+
+	private void readAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, int timestamp) {
+		IFrame frame = demuxer.videoStream(streamName).nextFrame();
+		BufferedImage restored = frame.image();
+		double diff = diff(restored, rest1.get(timestamp));
+		Assertions.assertEquals(0, diff, 1.0);
+	}
 
 }

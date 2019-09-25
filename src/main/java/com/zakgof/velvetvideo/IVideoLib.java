@@ -5,9 +5,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public interface IVideoLib {
 
@@ -74,7 +76,7 @@ public interface IVideoLib {
         }
     }
 
-    interface IDemuxer extends AutoCloseable {
+    interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket> {
         void close();
         List<? extends IDecoderVideoStream> videos();
         
@@ -86,6 +88,13 @@ public interface IVideoLib {
         
         Map<String, String> metadata();
         IMuxerProperties properties();
+        
+        Stream<IDecodedPacket> stream();
+        
+        @Override
+        Iterator<IDecodedPacket> iterator();
+        
+		IDecoderVideoStream videoStream(String streamName);
     }
     
     interface IDecodedPacket {
