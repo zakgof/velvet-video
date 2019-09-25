@@ -617,40 +617,6 @@ public class FFMpegVideoLib implements IVideoLib {
 
     }
 
-//    private interface IPacketStream extends AutoCloseable {
-//        void send(AVPacket packet);
-//        void close();
-//    }
-//
-//    private class OutputPacketStream implements IPacketStream {
-//
-//        private final OutputStream output;
-//
-//        public OutputPacketStream(OutputStream output) {
-//            this.output = output;
-//        }
-//
-//        @Override
-//        public void send(AVPacket packet) {
-//            byte[] bts = new byte[packet.size.get()]; // TODO perf: preallocate buffer
-//            packet.data.get().get(0, bts, 0, bts.length);
-//            try {
-//                output.write(bts);
-//            } catch (IOException e) {
-//                throw new VelvetVideoException(e);
-//            }
-//        }
-//
-//        @Override
-//        public void close() {
-//            try {
-//                output.close();
-//            } catch (IOException e) {
-//                throw new VelvetVideoException(e);
-//            }
-//        }
-//    }
-
     @Override
     public IDemuxer demuxer(InputStream is) {
         return new DemuxerImpl((FileInputStream) is);
@@ -781,18 +747,6 @@ public class FFMpegVideoLib implements IVideoLib {
 					return ret;
 				}
 			};
-        }
-
-        @Override
-        public boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer) {
-        	IDecodedPacket packet = nextPacket();
-        	if (packet == null) {
-        		return false;
-        	}
-        	if (packet.isVideo()) {
-        		videoConsumer.accept(packet.video());
-        	}
-        	return true;
         }
 
         /**

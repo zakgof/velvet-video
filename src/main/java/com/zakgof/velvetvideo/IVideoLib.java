@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public interface IVideoLib {
@@ -83,10 +82,6 @@ public interface IVideoLib {
 		void close();
         List<? extends IDecoderVideoStream> videos();
 
-        @Deprecated
-        boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer);
-
-        // TODO: iterator or stream !!
         IDecodedPacket nextPacket();
 
         Map<String, String> metadata();
