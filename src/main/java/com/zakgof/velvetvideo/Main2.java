@@ -2,7 +2,6 @@ package com.zakgof.velvetvideo;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
@@ -40,7 +39,12 @@ public class Main2 {
     
     public static void main2(String[] args) throws IOException {
         IVideoLib lib = new FFMpegVideoLib();
-        IDemuxer demuxer = lib.demuxer(new FileInputStream("c:\\pr\\1.mp4"));
+        IDemuxer demuxer = lib.demuxer(new File("path-to-video-file"));
+        while(demuxer.nextPacket(frame -> {
+        	BufferedImage image = frame.image();
+        	// You get frames as BufferedImages
+        }, null));
+        
         // BufferedImage nextFrame = demuxer.videos().get(0).nextFrame().image();
         
     }

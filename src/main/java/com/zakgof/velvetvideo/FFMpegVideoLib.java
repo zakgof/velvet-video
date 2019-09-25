@@ -9,7 +9,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -19,7 +18,6 @@ import java.util.Map.Entry;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import com.kenai.jffi.MemoryIO;
 import com.zakgof.velvetvideo.FFMpegNative.AVCodec;
 import com.zakgof.velvetvideo.FFMpegNative.AVCodecContext;
 import com.zakgof.velvetvideo.FFMpegNative.AVDictionaryEntry;
@@ -36,6 +34,7 @@ import com.zakgof.velvetvideo.FFMpegNative.LibAVFormat.ICustomAvioCallback;
 import com.zakgof.velvetvideo.FFMpegNative.LibAVUtil;
 import com.zakgof.velvetvideo.FFMpegNative.LibSwScale;
 import com.zakgof.velvetvideo.FFMpegNative.SwsContext;
+import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
 import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoLib.IEncoder.IBuilder;
 import com.zakgof.velvetvideo.IVideoLib.IFrame;
@@ -47,6 +46,7 @@ import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
 import jnr.ffi.Struct.int64_t;
 import jnr.ffi.byref.PointerByReference;
+import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
@@ -173,6 +173,12 @@ public class FFMpegVideoLib implements IVideoLib {
         } while (entry != null);
         return metadata;
     }
+    
+    private static byte[] extractPacketBytes(AVPacket packet) {
+		byte[] raw = new byte[packet.size.get()];
+		packet.data.get().get(0, raw, 0, raw.length);
+		return raw;
+	}
 
     private AVPixelFormat avformatOf(int type) {
         if (type == BufferedImage.TYPE_3BYTE_BGR) {
@@ -705,57 +711,72 @@ public class FFMpegVideoLib implements IVideoLib {
             }
     
         }
+        
+        @Override
+		public IDecodedPacket nextPacket() {
+			libavcodec.av_init_packet(packet);
+			packet.data.set((Pointer) null);
+			packet.size.set(0);
+
+			for (;;) {
+				int res = libavformat.av_read_frame(formatCtx, packet);
+				if (res == AVERROR_EAGAIN)
+					continue;
+				
+				if (res == AVERROR_EOF || res == -1) {
+					if (flusher == null) {
+						flusher = new Flusher();
+					}
+					return flusher.flush();
+				}
+				checkcode(res);
+				
+				System.out.println("read packet stream=" + packet.stream_index.get() + "  PTS/DTS=" + packet.pts.get()
+				+ "/" + packet.dts.get());
+				IDecodedPacket decodedPacket = decodePacket(packet);
+				if (decodedPacket != null) {
+					return decodedPacket;
+				}
+			}
+		}
+        
 
         @Override
         public boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer) {
-            
-            libavcodec.av_init_packet(packet);
-            packet.data.set((Pointer) null);
-            packet.size.set(0);
-            
-            int res;
-            do {
-                res = libavformat.av_read_frame(formatCtx, packet);
-                System.out.println("read packet stream=" + packet.stream_index.get() + "  PTS/DTS=" + packet.pts.get() + "/" + packet.dts.get());
-                if (res == AVERROR_EOF || res == -1) {
-                    if (flusher == null) {
-                        flusher = new Flusher();
-                    }
-                    res = flusher.flush(videoConsumer, audioConsumer);
-                } else {
-                    res = decodePacket(packet, videoConsumer, audioConsumer);
-                }                
-            } while (res == AVERROR_EAGAIN);
-            if (res == AVERROR_EOF)
-                return false;
-            checkcode(res);
-            return true;
+        	IDecodedPacket packet = nextPacket();
+        	if (packet == null) {
+        		return false;
+        	}
+        	if (packet.isVideo()) {
+        		videoConsumer.accept(packet.video());
+        	}
+        	return true;
         }
 
-        private int decodePacket(AVPacket p, Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer) {
+        /**
+         * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
+         */
+        private IDecodedPacket decodePacket(AVPacket p) {
             int index = p.stream_index.get();
             DecoderVideoStreamImpl stream = indexToVideoStream.get(index);
             if (stream != null)
-                return stream.decodePacket(p, videoConsumer, audioConsumer);
+                return stream.decodePacket(p);
             System.err.println("WARNING: packet of unknown stream");
-            return 0;
+            return new UnknownDecodedPacket(extractPacketBytes(packet));
         }
         
         private class Flusher {
             
             private int streamIndex = 0;
             
-            public int flush(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer) {
-                if (streamIndex >= streams.size())
-                    return AVERROR_EOF;
-                DecoderVideoStreamImpl stream = streams.get(streamIndex);
-                int res = 0;
-                do {
-                    res = stream.decodePacket(null, videoConsumer, audioConsumer);
-                    if (res == AVERROR_EOF || res == -1)
-                        streamIndex++;
-                } while (res == AVERROR_EAGAIN);
-                return res;
+            public IDecodedPacket flush() {
+                for (;streamIndex<streams.size(); streamIndex++) {
+                	DecoderVideoStreamImpl stream = streams.get(streamIndex);
+                	IDecodedPacket packet = stream.decodePacket(null);
+                    if (packet != null)
+                    	return packet;
+                }
+                return null;
             }
         }
 
@@ -783,33 +804,49 @@ public class FFMpegVideoLib implements IVideoLib {
                 return new Frame(bi, nanostamp, this);
             }
 
-            int decodePacket(AVPacket pack, Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer) {
+            /**
+             * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
+             */
+            IDecodedPacket decodePacket(AVPacket pack) {
                 int res = libavcodec.avcodec_send_packet(codecCtx, pack);
-                if (res != AVERROR_EOF && res != -1)
-                    checkcode(res);
+                if (res != AVERROR_EOF && pack == null) { 
+                	// When flushing, ignore EOF until receive_frame is full flushed 
+                	checkcode(res);
+                }
+                
                 if (frameHolder == null) {
                     this.frameHolder = new FrameHolder(codecCtx.width.get(), codecCtx.height.get(), codecCtx.pix_fmt.get(), AVPixelFormat.AV_PIX_FMT_BGR24, false);
                 }
                 res = libavcodec.avcodec_receive_frame(codecCtx, frameHolder.frame);
-                // System.out.print("Decoding packet: " + res);
                 if (res >=0) {
                     long pts = frameHolder.frame.pts.get();
-                    // System.out.print(" got frame pts=" + pts);
+                    System.out.print("decoder: frame pts=" + pts);
                     if (skipToPts != -1) {
                         if (pts < skipToPts) {
-                            // System.out.println(" but need to skip more to pts=" + skipToPts);
+                            System.out.println(" but need to skip more to pts=" + skipToPts);
                             res = -11;
                         } else if (pts > skipToPts) {
-                            // System.out.println(" unexpected position but continue searching for pts=" + skipToPts);
+                            System.out.println(" unexpected position but continue searching for pts=" + skipToPts);
                             res = -11;
+                        } else {
+                        	System.out.println(" ok");
                         }
+                    } else {
+                    	System.out.println(" ok");
                     }
                     if (res >= 0) {
-                        videoConsumer.accept(frameOf(frameHolder.getPixels()));
                         skipToPts = -1;
+                        return new DecodedVideoPacket(frameOf(frameHolder.getPixels()));
                     }
+                } else {
+                	System.out.println("decoder: res = " + res);
                 }
-                return res;
+                // Weird but ok. AVERROR_EOF on flush, AVERROR_EAGAIN on norm
+                if (res == AVERROR_EOF || res == AVERROR_EAGAIN) {
+                	return null;
+                }
+                checkcode(res);
+                return null; // Unreachable
             }
 
             @Override
@@ -849,6 +886,17 @@ public class FFMpegVideoLib implements IVideoLib {
                 this.skipToPts  = pts;
                 return this;
             }
+
+			@Override
+			public IFrame nextFrame() {
+				IDecodedPacket packet;
+				while((packet = nextPacket()) != null) {
+					if (packet.isVideo()) {
+						return packet.video();
+					}
+				}
+				return null;
+			}
             
             @Override
             public byte[] nextRawPacket() {
@@ -868,12 +916,12 @@ public class FFMpegVideoLib implements IVideoLib {
                     	 // TODO !
                     	 return null;
                      } else {
-                    	 byte[] raw = new byte[packet.size.get()];
-                         packet.data.get().get(0, raw, 0, raw.length);
-                         return raw;
+                    	 return extractPacketBytes(packet);
                      }                
                  } while (res == AVERROR_EAGAIN);
             }
+
+			
             
         }
         
@@ -925,4 +973,26 @@ class VideoStreamProperties implements IVideoStreamProperties {
     private final long frames;
     private final int width;
     private final int height;
+}
+
+@Accessors(fluent = true)
+@RequiredArgsConstructor
+class UnknownDecodedPacket implements IDecodedPacket {
+	private final byte[] bytes;
+}
+
+@Accessors(fluent = true)
+@RequiredArgsConstructor
+class DecodedVideoPacket implements IDecodedPacket {
+	private final IFrame frame;
+
+	@Override
+	public IFrame video() {
+		return frame;
+	}
+	
+	@Override
+	public boolean isVideo() {
+		return true;
+	}
 }

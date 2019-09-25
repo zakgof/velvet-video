@@ -33,8 +33,7 @@ public interface IVideoLib {
             IBuilder metadata(String key, String value);
             
             IBuilder enableExperimental();
-
-            // IEncoder build(OutputStream output);
+            
         }
 
     }
@@ -78,15 +77,32 @@ public interface IVideoLib {
     interface IDemuxer extends AutoCloseable {
         void close();
         List<? extends IDecoderVideoStream> videos();
+        
+        @Deprecated
         boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer);
+        
+        // TODO: iterator or stream !!
+        IDecodedPacket nextPacket();
+        
         Map<String, String> metadata();
         IMuxerProperties properties();
+    }
+    
+    interface IDecodedPacket {
+    	default IFrame video() {
+    		return null;
+    	}
+    	default boolean isVideo() {
+    		return false;
+    	}
+    	// boolean isAudio();
+    	// TODO: enum ?
     }
 
     interface IDecoderVideoStream {
         String name();
-        // void close();
-        // IFrame nextFrame();
+
+        IFrame nextFrame();
 
         Map<String, String> metadata();
         IVideoStreamProperties properties();

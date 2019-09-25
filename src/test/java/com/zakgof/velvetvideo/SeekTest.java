@@ -49,6 +49,8 @@ public class SeekTest extends VelvetVideoTest {
                     rest1.add(f.image());
                 }, null));
         }
+        
+        Assertions.assertEquals(FRAMES, rest1.size());
 
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
             IDecoderVideoStream videoStream = demuxer.videos().get(0);
