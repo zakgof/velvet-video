@@ -92,8 +92,7 @@ public class SeekTest extends VelvetVideoTest {
 	private void readAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, int timestamp) {
 		IFrame frame = demuxer.videoStream(streamName).nextFrame();
 		BufferedImage restored = frame.image();
-		double diff = diff(restored, rest1.get(timestamp));
-		Assertions.assertEquals(0, diff, 1.0);
+		assertEqual(restored, rest1.get(timestamp));
 	}
 
 }

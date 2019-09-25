@@ -19,6 +19,8 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
+	runtimeOnly 'org.slf4j:slf4j-api:2.0.0-alpha0'
+	
     implementation 'com.github.jnr:jnr-ffi:2.1.9'
     implementation 'commons-io:commons-io:2.6'
 
@@ -36,9 +38,6 @@ repositories {
 }
 
 task fatJar(type: Jar) {
-    //manifest {
-    //    attributes 'Main-Class': 'com.zakgof.velvetvideo.Main2'
-    //}
     baseName = 'velvet-video'
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
@@ -145,7 +144,7 @@ artifactory {
     resolve {
         repoKey = 'jcenter'
     }
-    clientConfig.info.setBuildNumber('0001')
+    clientConfig.info.setBuildNumber('0002')
 }
 
 

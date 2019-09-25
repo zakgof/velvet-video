@@ -18,9 +18,8 @@ public class MetadataTest extends VelvetVideoTest {
     public void testStreamMetadata() throws IOException {
         Path file = dir.resolve("stream-metadata.mp4");
         System.err.println(file);
-        try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4")
-                .metadata("language", "ukr")
-                .metadata("handler_name", "Track 4"))
+        try (IMuxer muxer = lib.muxer("mp4").video("Track 4", lib.encoder("mpeg4")
+            .metadata("language", "ukr"))
             .build(file.toFile())) {            
             muxer.video("color").encode(colorImage(2), 0);            
         }

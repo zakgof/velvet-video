@@ -6,11 +6,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
+import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
+import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IMuxer;
 
 public class VelvetVideoTest {
@@ -73,6 +78,11 @@ public class VelvetVideoTest {
 		}
 		return diff / bytes1.length;
 	}
+	
+	protected void assertEqual(BufferedImage im1, BufferedImage im2) {
+		double diff = diff(im1, im2);
+		Assertions.assertEquals(0, diff, 1.0);
+	}
 
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
@@ -102,5 +112,16 @@ public class VelvetVideoTest {
 			}
 		}
 		return origs;
+	}
+
+	protected List<BufferedImage> loadFrames(File file, int frames) {
+		List<BufferedImage> restored = new ArrayList<>(frames);
+		try (IDemuxer demuxer = lib.demuxer(file)) {
+			for (IDecodedPacket packet : demuxer) {
+				restored.add(packet.video().image());
+			}
+		}
+		Assertions.assertEquals(frames, restored.size());
+		return restored;
 	}
 }

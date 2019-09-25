@@ -24,6 +24,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.zakgof.velvetvideo.FFMpegNative.AVCodec;
 import com.zakgof.velvetvideo.FFMpegNative.AVCodecContext;
 import com.zakgof.velvetvideo.FFMpegNative.AVDictionaryEntry;
@@ -53,6 +56,7 @@ import jnr.ffi.Struct;
 import jnr.ffi.Struct.int64_t;
 import jnr.ffi.byref.PointerByReference;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
@@ -77,6 +81,8 @@ public class FFMpegVideoLib implements IVideoLib {
     private static final int AVERROR_EOF = -541478725;
     private static final int AVERROR_EAGAIN = -11;
     private static final long AVNOPTS_VALUE = -9223372036854775808L;
+    
+    private static final int ERROR_TEXT_BUFFER_SIZE = 512;
 
     private final Runtime runtime = Runtime.getSystemRuntime();
     
@@ -84,17 +90,16 @@ public class FFMpegVideoLib implements IVideoLib {
     private final LibSwScale libswscale;
     private final LibAVCodec libavcodec;
     private final LibAVFormat libavformat;
-    
+
     private int checkcode(int code) {
         if (code < 0) {
-            Pointer ptr = runtime.getMemoryManager().allocateDirect(512); // TODO !!!
-            libavutil.av_strerror(code, ptr, 512);
-            byte[] bts = new byte[512];
-            ptr.get(0, bts, 0, 512);
+			Pointer ptr = runtime.getMemoryManager().allocateDirect(ERROR_TEXT_BUFFER_SIZE); // TODO !!!
+            libavutil.av_strerror(code, ptr, ERROR_TEXT_BUFFER_SIZE);
+            byte[] bts = new byte[ERROR_TEXT_BUFFER_SIZE];
+            ptr.get(0, bts, 0, ERROR_TEXT_BUFFER_SIZE);
             int len = 0;
-            for (int i=0; i<512; i++) if (bts[i] == 0) len = i;
+            for (int i=0; i<ERROR_TEXT_BUFFER_SIZE; i++) if (bts[i] == 0) len = i;
             String s = new String(bts, 0, len);
-            System.err.println("FFMPEG error " + code + " : "+ s);
             throw new VelvetVideoException("FFMPEG error " + code + " : "+ s);
         }
         return code;
@@ -366,6 +371,8 @@ public class FFMpegVideoLib implements IVideoLib {
 
     private class EncoderImpl implements IEncoder {
         
+    	private final Logger logEncoder = LoggerFactory.getLogger("velvet-video.encoder");
+
         private final AVPacket packet;
         private final AVCodecContext codecCtx;
 
@@ -413,7 +420,7 @@ public class FFMpegVideoLib implements IVideoLib {
         }
 
         private void encodeFrame(AVFrame frame, AVPacket packet) {
-            System.err.println(frame == null ? ">>> flush  the encoder" : ">>> send frame to encoder " + frame.pts.get());
+        	logEncoder.atDebug().log(() -> frame == null ? ">>> flush  the encoder" : ">>> send frame to encoder " + frame.pts.get());
             checkcode(libavcodec.avcodec_send_frame(codecCtx, frame));
             for (;;) {
                 libavcodec.av_init_packet(packet);
@@ -427,13 +434,13 @@ public class FFMpegVideoLib implements IVideoLib {
                 packet.stream_index.set(streamIndex);
                 fixPacketPtsDts(packet);
                 
-                System.err.println("<<< encoder returned packet " + packet.pts.get() + " / " + packet.pts.get());
+                logEncoder.atDebug()
+                	.addArgument(() -> packet.pts.get()) 
+                	.addArgument(() -> packet.dts.get()) 
+                	.log(() -> "<<< encoder returned packet  PTS/DTS: {}/{}");
                 
                 output.accept(packet);
-                // libavcodec.av_packet_unref(packet);
             }
-        
-            // 
         }
 
         private void fixPacketPtsDts(AVPacket packet) {
@@ -534,6 +541,8 @@ public class FFMpegVideoLib implements IVideoLib {
 
     private class MuxerImpl implements IMuxer {
 
+    	private final Logger logMuxer = LoggerFactory.getLogger("velvet-video.muxer");
+        
         private final LibAVFormat libavformat;
         private final Map<String, EncoderImpl> videoStreams;
         private final ISeekableOutput output;
@@ -648,6 +657,7 @@ public class FFMpegVideoLib implements IVideoLib {
     
     private class DemuxerImpl implements IDemuxer {
         
+    	private final Logger logDemuxer = LoggerFactory.getLogger("velvet-video.demuxer");
         private AVFormatContext formatCtx;
         private ISeekableInput input;
         private IOCallback callback;
@@ -704,8 +714,6 @@ public class FFMpegVideoLib implements IVideoLib {
                 final int SEEK_END = 2;   /* set file offset to EOF plus offset */
                 final int AVSEEK_SIZE = 0x10000;   /* set file offset to EOF plus offset */
                 
-                // System.err.println("Seek custom avio to " + offset + "/" + whence); // TODO whence
-                // output.seek(offset);
                 if (whence == SEEK_SET)
                     input.seek(offset);
                 else if (whence == SEEK_END)
@@ -737,8 +745,8 @@ public class FFMpegVideoLib implements IVideoLib {
 				}
 				checkcode(res);
 				
-				System.out.println("read packet stream=" + packet.stream_index.get() + "  PTS/DTS=" + packet.pts.get()
-				+ "/" + packet.dts.get());
+				logDemuxer.atDebug().log(() -> "read packet stream=" + packet.stream_index.get() + "  PTS/DTS="
+						+ packet.pts.get() + "/" + packet.dts.get());
 				IDecodedPacket decodedPacket = decodePacket(packet);
 				if (decodedPacket != null) {
 					return decodedPacket;
@@ -794,10 +802,10 @@ public class FFMpegVideoLib implements IVideoLib {
             DecoderVideoStreamImpl stream = indexToVideoStream.get(index);
             if (stream != null)
                 return stream.decodePacket(p);
-            System.err.println("WARNING: packet of unknown stream");
+            logDemuxer.atWarn().addArgument(() -> index).log("WARNING: packet of unknown stream {}");
             return new UnknownDecodedPacket(extractPacketBytes(packet));
         }
-        
+
         private class Flusher {
             
             private int streamIndex = 0;
@@ -815,6 +823,8 @@ public class FFMpegVideoLib implements IVideoLib {
 
         private class DecoderVideoStreamImpl implements IDecoderVideoStream {
 
+        	private final Logger logDecoder = LoggerFactory.getLogger("velvet-video.decoder");
+            
             private final AVStream avstream;
             private final String name;
             private AVCodecContext codecCtx;
@@ -853,26 +863,22 @@ public class FFMpegVideoLib implements IVideoLib {
                 res = libavcodec.avcodec_receive_frame(codecCtx, frameHolder.frame);
                 if (res >=0) {
                     long pts = frameHolder.frame.pts.get();
-                    System.out.print("decoder: frame pts=" + pts);
+                    logDecoder.atDebug().addArgument(() -> pts).log("decoder: frame pts={}");
                     if (skipToPts != -1) {
                         if (pts < skipToPts) {
-                            System.out.println(" but need to skip more to pts=" + skipToPts);
+                        	logDecoder.atDebug().addArgument(() -> skipToPts).log(" ...but need to skip more to pts={}");
                             res = -11;
                         } else if (pts > skipToPts) {
-                            System.out.println(" unexpected position but continue searching for pts=" + skipToPts);
+                        	logDecoder.atDebug().addArgument(() -> skipToPts).log(" ...unexpected position but continue searching for pts={}");
                             res = -11;
-                        } else {
-                        	System.out.println(" ok");
                         }
-                    } else {
-                    	System.out.println(" ok");
                     }
                     if (res >= 0) {
                         skipToPts = -1;
                         return new DecodedVideoPacket(frameOf(frameHolder.getPixels()));
                     }
                 } else {
-                	System.out.println("decoder: res = " + res);
+                	logDecoder.atDebug().addArgument(res).log("decoder: res={}");
                 }
                 // Weird but ok. AVERROR_EOF on flush, AVERROR_EAGAIN on norm
                 if (res == AVERROR_EOF || res == AVERROR_EAGAIN) {
@@ -913,8 +919,7 @@ public class FFMpegVideoLib implements IVideoLib {
                 long cd = codecCtx.time_base.den.get();
                 
                 long pts = timestamp * cn * avstream.time_base.den.get() * codecCtx.ticks_per_frame.get() / cd / avstream.time_base.num.get();
-                System.out.println("seeking to frame " + timestamp + " pts=" + pts);
-                
+                logDecoder.atDebug().addArgument(() -> timestamp).addArgument(() -> pts).log("seeking to frame t={} pts={}");
                 checkcode(libavformat.av_seek_frame(formatCtx, this.index, pts, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD));
                 this.skipToPts  = pts;
                 return this;
@@ -940,7 +945,11 @@ public class FFMpegVideoLib implements IVideoLib {
                  int res;
                  do {
                      res = libavformat.av_read_frame(formatCtx, packet);
-                     System.out.println("read packet stream=" + packet.stream_index.get() + "  PTS/DTS=" + packet.pts.get() + "/" + packet.dts.get());
+                     logDemuxer.atDebug()
+                        .addArgument(() -> packet.stream_index.get())
+                        .addArgument(() -> packet.pts.get())
+                        .addArgument(() -> packet.dts.get())
+                        .log("read packet stream={}  PTS/DTS={}/{}");
                      if (res == AVERROR_EOF || res == -1) {
 //                         if (flusher == null) {
 //                             flusher = new Flusher();
@@ -994,16 +1003,22 @@ class Frame implements IFrame {
     private final BufferedImage image;
     private final long nanostamp;
     private final IDecoderVideoStream stream;
+
+    public String toString() {
+    	return "Video frame t=" + nanostamp + " stream:" + stream.name();
+    }
 }
 
 @Accessors(fluent = true)
 @Value
+@ToString
 class MuxerProperties implements IMuxerProperties {
     private final String format;
 }
 
 @Accessors(fluent = true)
 @Value
+@ToString
 class VideoStreamProperties implements IVideoStreamProperties {
     private final String codec;
     private final double framerate;
