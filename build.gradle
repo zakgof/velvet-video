@@ -12,7 +12,7 @@ compileJava.options.encoding = 'UTF-8'
 
 group = 'com.github.zakgof'
 archivesBaseName = 'velvet-video'
-version = '0.0.2-SNAPSHOT'
+version = '0.0.3-SNAPSHOT'
 def github = 'https://github.com/zakgof/velvet-video'
 
 sourceCompatibility = 1.8
