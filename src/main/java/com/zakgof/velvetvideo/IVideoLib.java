@@ -114,7 +114,8 @@ public interface IVideoLib {
         Map<String, String> metadata();
         IVideoStreamProperties properties();
 
-        IDecoderVideoStream seek(long frame);
+        IDecoderVideoStream seek(long frameNumber);
+        IDecoderVideoStream seekNano(long ns);
 
 		byte[] nextRawPacket();
     }

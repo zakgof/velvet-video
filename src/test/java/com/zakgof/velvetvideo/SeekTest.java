@@ -86,8 +86,7 @@ public class SeekTest extends VelvetVideoTest {
 
 	private void seekAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, 	int frameNo) {
 		IDecoderVideoStream videoStream = demuxer.videoStream(streamName);
-		double framerate = videoStream.properties().framerate();
-		videoStream.seek(Math.round(1000000000.0 * frameNo * framerate));
+		videoStream.seek(frameNo);
 		readAndVerify(rest1, streamName, demuxer, frameNo);
 	}
 

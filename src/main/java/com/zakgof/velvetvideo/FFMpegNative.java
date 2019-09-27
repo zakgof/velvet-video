@@ -63,7 +63,7 @@ class FFMpegNative {
         int av_codec_is_encoder(AVCodec codec);
         int av_codec_is_decoder(AVCodec codec);
 
-
+        void avcodec_flush_buffers(AVCodecContext context);
     }
 
     public interface LibAVUtil {
