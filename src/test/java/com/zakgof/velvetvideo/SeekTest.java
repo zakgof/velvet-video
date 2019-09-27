@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
+import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IFrame;
 
@@ -24,7 +25,6 @@ public class SeekTest extends VelvetVideoTest {
 
 		createSingleStreamVideo("libx264", "mp4", file, FRAMES);
 		List<BufferedImage> rest1 = new ArrayList<>(FRAMES);
-
 		try (IDemuxer demuxer = lib.demuxer(file)) {
 			for (IDecodedPacket packet : demuxer) {
 				rest1.add(packet.video().image());
@@ -84,15 +84,18 @@ public class SeekTest extends VelvetVideoTest {
 		}
 	}
 
-	private void seekAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, 	int timestamp) {
-		demuxer.videoStream(streamName).seek(timestamp);
-		readAndVerify(rest1, streamName, demuxer, timestamp);
+	private void seekAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, 	int frameNo) {
+		IDecoderVideoStream videoStream = demuxer.videoStream(streamName);
+		double framerate = videoStream.properties().framerate();
+		videoStream.seek(Math.round(1000000000.0 * frameNo * framerate));
+		readAndVerify(rest1, streamName, demuxer, frameNo);
 	}
 
-	private void readAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, int timestamp) {
-		IFrame frame = demuxer.videoStream(streamName).nextFrame();
+	private void readAndVerify(List<BufferedImage> rest1, String streamName, IDemuxer demuxer, int frameNo) {
+		IDecoderVideoStream videoStream = demuxer.videoStream(streamName);
+		IFrame frame = videoStream.nextFrame();
 		BufferedImage restored = frame.image();
-		assertEqual(restored, rest1.get(timestamp));
+		assertEqual(restored, rest1.get(frameNo));
 	}
 
 }
