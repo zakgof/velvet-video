@@ -7,11 +7,13 @@ import java.lang.reflect.Constructor;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Platform;
@@ -22,15 +24,18 @@ import jnr.ffi.provider.ParameterFlags;
 
 class JNRHelper {
 
+
+	private static Logger LOG = LoggerFactory.getLogger("velvet-video");
     private static String PLATFORM = getPlatform();
     private static File extractionDir = createExtractionDirectory();
 
 	private static File createExtractionDirectory() {
-		try {
-			return Files.createTempDirectory("velvet-video-").toFile(); // TODO
-		} catch (IOException e) {
+		String home = System.getProperty("user.home");
+		File dir = Paths.get(home, ".velvet-video", "natives", "0.0.0").toFile(); // TODO
+		if (!dir.exists() && !dir.mkdirs()) {
 			throw new VelvetVideoException("Cannot create a dir for extracting native libraries.");
 		}
+		return dir;
 	}
 
     static <L> L load(Class<L> clazz, String libName) {
@@ -53,7 +58,7 @@ class JNRHelper {
                     zif.stream().filter(zipEntry -> !zipEntry.isDirectory() && zipEntry.getName().startsWith(folder))
                         .forEach(zipEntry -> {
                             String rawfilename = zipEntry.getName().split("/")[2];
-                            System.err.println("Extracting " + zipEntry + " to " + new File(extractionDir, rawfilename));
+                            LOG.info("Extracting " + zipEntry + " to " + new File(extractionDir, rawfilename));
                             try (InputStream inputStream = zif.getInputStream(zipEntry)) {
                                 FileUtils.copyInputStreamToFile(inputStream, new File(extractionDir, rawfilename));
                             } catch (IOException e) {
