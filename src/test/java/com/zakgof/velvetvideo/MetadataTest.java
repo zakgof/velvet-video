@@ -93,7 +93,10 @@ public class MetadataTest extends VelvetVideoTest {
     	int FRAMES = 5;
         Path file = dir.resolve("stream-metadata-" + codec + "." + format);
         System.err.println("Writing " + file);
-        try (IMuxer muxer = lib.muxer(format).video("color", lib.encoder(codec).framerate(25)).build(file.toFile())) {
+        try (IMuxer muxer = lib.muxer(format).video("color", lib.encoder(codec)
+        		.framerate(25)
+        		.dimensions(640, 480))
+        	.build(file.toFile())) {
             IEncoder encoder = muxer.video("color");
             for (int i=0; i<FRAMES; i++) {
             	encoder.encode(colorImage(i), i);

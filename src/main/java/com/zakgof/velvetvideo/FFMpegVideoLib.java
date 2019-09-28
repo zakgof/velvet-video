@@ -283,6 +283,8 @@ public class FFMpegVideoLib implements IVideoLib {
         private int bitrate = 400000;
         private Map<String, String> params = new HashMap<>();
         private Map<String, String> metadata = new HashMap<>();
+        private int width = 1920;
+        private int height = 1080;
         private boolean enableExperimental;
 
         public EncoderBuilderImpl(String codec) {
@@ -299,6 +301,13 @@ public class FFMpegVideoLib implements IVideoLib {
         @Override
         public IBuilder bitrate(int bitrate) {
             this.bitrate = bitrate;
+            return this;
+        }
+
+        @Override
+        public IBuilder dimensions(int width, int height) {
+            this.width = width;
+            this.height = height;
             return this;
         }
 
@@ -373,8 +382,8 @@ public class FFMpegVideoLib implements IVideoLib {
             codecCtx.time_base.den.set(builder.timebaseDen);
             int firstFormat = codec.pix_fmts.get().getInt(0);
             codecCtx.pix_fmt.set(firstFormat); // TODO ?
-            codecCtx.width.set(640);
-            codecCtx.height.set(480);
+            codecCtx.width.set(builder.width);
+            codecCtx.height.set(builder.height);
             if (builder.enableExperimental) {
             	codecCtx.strict_std_compliance.set(-2);
             }
@@ -583,12 +592,12 @@ public class FFMpegVideoLib implements IVideoLib {
             checkcode(libavformat.avformat_write_header(formatCtx, null));
 
             // TODO: fix dis hack
+            // this does not really work for some codecs
+            // (mjpeg, ffv1, msmpeg4, msmpeg4v2, wmv1)
             videoStreams.values().forEach(enc -> {
             	enc.init();
             });
         }
-
-
 
 		private class IOCallback implements ICustomAvioCallback {
 

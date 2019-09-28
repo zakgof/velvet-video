@@ -29,6 +29,8 @@ public interface IVideoLib {
 
             IBuilder bitrate(int bitrate);
 
+            IBuilder dimensions(int width, int height);
+
             IBuilder param(String key, String value);
 
             IBuilder metadata(String key, String value);

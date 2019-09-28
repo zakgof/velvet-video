@@ -87,7 +87,12 @@ public class VelvetVideoTest {
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
 		try (IMuxer muxer = lib.muxer(format)
-				.video("dflt", lib.encoder(codec).bitrate(3000000).framerate(30).enableExperimental()).build(file)) {
+				.video("dflt", lib.encoder(codec)
+					.bitrate(3000000)
+					.dimensions(640, 480)
+					.framerate(30)
+					.enableExperimental())
+				.build(file)) {
 			for (int i = 0; i < orig.length; i++) {
 				BufferedImage image = colorImage(i);
 				muxer.video("dflt").encode(image, i);
@@ -100,8 +105,15 @@ public class VelvetVideoTest {
 	protected BufferedImage[][] createTwoStreamVideo(File file, int frames) {
 		System.err.println(file);
 		BufferedImage[][] origs = { new BufferedImage[frames], new BufferedImage[frames] };
-		try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4").framerate(1))
-				.video("bw", lib.encoder("mpeg4").framerate(1)).build(file)) {
+		try (IMuxer muxer = lib.muxer("mp4")
+				.video("color", lib.encoder("mpeg4")
+			        .dimensions(640, 480)
+				    .framerate(1))
+				.video("bw", lib.encoder("mpeg4")
+				     .dimensions(640, 480)
+				     .framerate(1))
+				.build(file)) {
+
 			for (int i = 0; i < frames; i++) {
 				BufferedImage color = colorImage(i);
 				BufferedImage bw = bwImage(i);
