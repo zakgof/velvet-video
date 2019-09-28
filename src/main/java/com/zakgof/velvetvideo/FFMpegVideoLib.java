@@ -367,7 +367,7 @@ public class FFMpegVideoLib implements IVideoLib {
             if (this.codec == null) {
                 throw new VelvetVideoException("Unknown video codec: " + builder.codec);
             }
-            stream = libavformat.avformat_new_stream(formatCtx, null);  // TODO free
+            stream = libavformat.avformat_new_stream(formatCtx, codec);  // TODO free
 
             this.codecCtx = libavcodec.avcodec_alloc_context3(codec);  // TODO free
             if ((formatCtx.ctx_flags.get() & AVFMT_GLOBALHEADER) != 0) {
@@ -518,6 +518,8 @@ public class FFMpegVideoLib implements IVideoLib {
 		}
 
 		public void close() {
+			libavcodec.avcodec_close(codecCtx);
+			libavcodec.avcodec_free_context(new Pointer[] {Struct.getMemory(codecCtx)});
 		}
 
     }
