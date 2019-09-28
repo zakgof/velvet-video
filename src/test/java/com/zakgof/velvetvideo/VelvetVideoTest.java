@@ -6,11 +6,16 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
+import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
+import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IMuxer;
 
 public class VelvetVideoTest {
@@ -74,10 +79,20 @@ public class VelvetVideoTest {
 		return diff / bytes1.length;
 	}
 
+	protected void assertEqual(BufferedImage im1, BufferedImage im2) {
+		double diff = diff(im1, im2);
+		Assertions.assertEquals(0, diff, 1.0);
+	}
+
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
 		try (IMuxer muxer = lib.muxer(format)
-				.video("dflt", lib.encoder(codec).bitrate(3000000).framerate(30).enableExperimental()).build(file)) {
+				.video("dflt", lib.encoder(codec)
+					.bitrate(3000000)
+					.dimensions(640, 480)
+					.framerate(30)
+					.enableExperimental())
+				.build(file)) {
 			for (int i = 0; i < orig.length; i++) {
 				BufferedImage image = colorImage(i);
 				muxer.video("dflt").encode(image, i);
@@ -90,8 +105,15 @@ public class VelvetVideoTest {
 	protected BufferedImage[][] createTwoStreamVideo(File file, int frames) {
 		System.err.println(file);
 		BufferedImage[][] origs = { new BufferedImage[frames], new BufferedImage[frames] };
-		try (IMuxer muxer = lib.muxer("mp4").video("color", lib.encoder("mpeg4").framerate(1))
-				.video("bw", lib.encoder("mpeg4").framerate(1)).build(file)) {
+		try (IMuxer muxer = lib.muxer("mp4")
+				.video("color", lib.encoder("mpeg4")
+			        .dimensions(640, 480)
+				    .framerate(1))
+				.video("bw", lib.encoder("mpeg4")
+				     .dimensions(640, 480)
+				     .framerate(1))
+				.build(file)) {
+
 			for (int i = 0; i < frames; i++) {
 				BufferedImage color = colorImage(i);
 				BufferedImage bw = bwImage(i);
@@ -102,5 +124,16 @@ public class VelvetVideoTest {
 			}
 		}
 		return origs;
+	}
+
+	protected List<BufferedImage> loadFrames(File file, int frames) {
+		List<BufferedImage> restored = new ArrayList<>(frames);
+		try (IDemuxer demuxer = lib.demuxer(file)) {
+			for (IDecodedPacket packet : demuxer) {
+				restored.add(packet.video().image());
+			}
+		}
+		Assertions.assertEquals(frames, restored.size());
+		return restored;
 	}
 }

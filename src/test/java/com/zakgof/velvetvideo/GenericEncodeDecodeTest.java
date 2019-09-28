@@ -18,7 +18,7 @@ import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IFrame;
 
 public class GenericEncodeDecodeTest extends VelvetVideoTest {
-    
+
     private static final int FRAMES = 16;
 
     protected void codeclist(Collection<String> expectedCodecs) throws IOException {
@@ -28,14 +28,14 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
         codecSet.removeAll(codecs);
         Assertions.assertTrue(codecSet.isEmpty(), "Missing codecs: " + codecSet);
     }
- 
+
     protected void encodeDecodeCompare(String codec, String format) throws IOException {
-        
+
         File file = dir.resolve(codec + "." + format).toFile();
         System.err.println(file);
 
         BufferedImage[] orig = createSingleStreamVideo(codec, format, file, FRAMES);
-        
+
         double dff = diff(orig[0], orig[3]);
         System.err.println("[0] to [3] " + dff);
         try (IDemuxer demuxer = lib.demuxer(file)) {
@@ -60,7 +60,7 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
         }
     }
 
-    
+
 	public void testEncodeDecodeTwoStreams() throws IOException {
 
 		File file = dir.resolve("two.mp4").toFile();
@@ -91,8 +91,8 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 
 
 
-   
 
-  
+
+
 
 }

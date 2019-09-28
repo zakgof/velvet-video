@@ -8,13 +8,9 @@ import java.nio.channels.SeekableByteChannel;
 import com.zakgof.velvetvideo.IVideoLib.ISeekableInput;
 
 public class FileSeekableInput implements ISeekableInput {
-    
+
     private SeekableByteChannel channel;
     private FileInputStream fos;
-
-    public FileSeekableInput(SeekableByteChannel channel) {
-        
-    }
 
     public FileSeekableInput(FileInputStream fis) {
         this.fos = fis;
@@ -26,7 +22,7 @@ public class FileSeekableInput implements ISeekableInput {
         try {
             return channel.read(ByteBuffer.wrap(bytes));
         } catch (IOException e) {
-            throw new VelvetVideoException(e); 
+            throw new VelvetVideoException(e);
         }
     }
 
@@ -35,7 +31,7 @@ public class FileSeekableInput implements ISeekableInput {
         try {
             channel.position(position);
         } catch (IOException e) {
-            throw new VelvetVideoException(e); 
+            throw new VelvetVideoException(e);
         }
     }
 
@@ -57,5 +53,5 @@ public class FileSeekableInput implements ISeekableInput {
             throw new VelvetVideoException(e);
         }
     }
-    
+
 }

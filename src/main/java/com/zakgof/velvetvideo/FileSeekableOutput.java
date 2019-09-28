@@ -8,13 +8,9 @@ import java.nio.channels.SeekableByteChannel;
 import com.zakgof.velvetvideo.IVideoLib.ISeekableOutput;
 
 public class FileSeekableOutput implements ISeekableOutput {
-    
+
     private SeekableByteChannel channel;
     private FileOutputStream fos;
-
-    public FileSeekableOutput(SeekableByteChannel channel) {
-        
-    }
 
     public FileSeekableOutput(FileOutputStream fos) {
         this.fos = fos;
@@ -26,7 +22,7 @@ public class FileSeekableOutput implements ISeekableOutput {
         try {
             channel.write(ByteBuffer.wrap(bytes));
         } catch (IOException e) {
-            throw new VelvetVideoException(e); 
+            throw new VelvetVideoException(e);
         }
     }
 
@@ -35,7 +31,7 @@ public class FileSeekableOutput implements ISeekableOutput {
         try {
             channel.position(position);
         } catch (IOException e) {
-            throw new VelvetVideoException(e); 
+            throw new VelvetVideoException(e);
         }
     }
 
@@ -48,5 +44,5 @@ public class FileSeekableOutput implements ISeekableOutput {
             throw new VelvetVideoException(e);
         }
     }
-    
+
 }

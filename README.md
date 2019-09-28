@@ -1,6 +1,9 @@
 # velvet-video
 Java library for encoding/decoding/muxing/demuxing video
 
+[![Travis CI](https://travis-ci.org/zakgof/velvet-video.svg?branch=release)](https://travis-ci.org/zakgof/velvet-video)
+[![velvet-video on bintray](https://api.bintray.com/packages/zakgof/maven/velvet-video/images/download.svg)](https://bintray.com/zakgof/maven/velvet-video)
+
 velvet-video is using FFmpeg libraries via JNR.
 
 Supported platforms:    

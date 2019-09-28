@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public interface IVideoLib {
@@ -22,7 +21,7 @@ public interface IVideoLib {
     interface IEncoder {
 
         void encode(BufferedImage bi, long pts);
-        
+
         void writeRaw(byte[] packetData);
 
         interface IBuilder {
@@ -30,12 +29,14 @@ public interface IVideoLib {
 
             IBuilder bitrate(int bitrate);
 
+            IBuilder dimensions(int width, int height);
+
             IBuilder param(String key, String value);
-            
+
             IBuilder metadata(String key, String value);
-            
+
             IBuilder enableExperimental();
-            
+
         }
 
     }
@@ -43,31 +44,33 @@ public interface IVideoLib {
     interface IEncoderStream extends AutoCloseable {
         void send(byte[] bytes);
 
-        void close();
+        @Override
+		void close();
     }
 
     interface IMuxer extends AutoCloseable {
 
         interface IBuilder {
-            
+
             IMuxer.IBuilder video(String name, IEncoder.IBuilder encoderBuilder);
-            
+
             IBuilder metadata(String key, String value);
 
             IMuxer build(File outputFile);
-            
+
             IMuxer build(ISeekableOutput output);
 
             // IEncoder.IBuilder video(String codec);
         }
 
-        void close();
+        @Override
+		void close();
 
         IEncoder video(String name);
     }
 
     IDemuxer demuxer(InputStream is);
-    
+
     default IDemuxer demuxer(File file) {
         try {
             return demuxer(new FileInputStream(file));
@@ -77,26 +80,23 @@ public interface IVideoLib {
     }
 
     interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket> {
-        void close();
+        @Override
+		void close();
         List<? extends IDecoderVideoStream> videos();
-        
-        @Deprecated
-        boolean nextPacket(Consumer<IFrame> videoConsumer, Consumer<IAudioPacket> audioConsumer);
-        
-        // TODO: iterator or stream !!
+
         IDecodedPacket nextPacket();
-        
+
         Map<String, String> metadata();
         IMuxerProperties properties();
-        
+
         Stream<IDecodedPacket> stream();
-        
+
         @Override
         Iterator<IDecodedPacket> iterator();
-        
+
 		IDecoderVideoStream videoStream(String streamName);
     }
-    
+
     interface IDecodedPacket {
     	default IFrame video() {
     		return null;
@@ -116,21 +116,22 @@ public interface IVideoLib {
         Map<String, String> metadata();
         IVideoStreamProperties properties();
 
-        IDecoderVideoStream seek(long frame);
+        IDecoderVideoStream seek(long frameNumber);
+        IDecoderVideoStream seekNano(long ns);
 
 		byte[] nextRawPacket();
     }
-    
+
     interface IFrame {
         IDecoderVideoStream stream();
         BufferedImage image();
         long nanostamp();
     }
-    
+
     interface IMuxerProperties {
         String format();
     }
-    
+
     interface IVideoStreamProperties {
         String codec();
         double framerate();
@@ -139,24 +140,26 @@ public interface IVideoLib {
         int width();
         int height();
     }
-    
+
     interface IAudioPacket {
         // IAudioStream stream();
         byte[] data();
     }
-    
+
     interface ISeekableInput extends AutoCloseable {
         int read(byte[] bytes);
         void seek(long position);
-        void close();
+        @Override
+		void close();
         long size();
     }
-    
-    
+
+
     interface ISeekableOutput extends AutoCloseable {
         void write(byte[] bytes);
         void seek(long position);
-        void close();
+        @Override
+		void close();
     }
 
     enum Direction {
