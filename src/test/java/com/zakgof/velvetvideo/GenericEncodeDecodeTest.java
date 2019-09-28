@@ -36,8 +36,8 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 
         BufferedImage[] orig = createSingleStreamVideo(codec, format, file, FRAMES);
 
-        double dff = diff(orig[0], orig[3]);
-        System.err.println("[0] to [3] " + dff);
+        double dff = diff(orig[0], orig[1]);
+        System.err.println("[0] to [1] " + dff);
         try (IDemuxer demuxer = lib.demuxer(file)) {
             int i = 0;
 			for (IDecodedPacket packet : demuxer) {

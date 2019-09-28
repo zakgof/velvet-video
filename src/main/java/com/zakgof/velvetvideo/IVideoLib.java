@@ -16,6 +16,8 @@ public interface IVideoLib {
 
     IEncoder.IBuilder encoder(String format);
 
+    // IEncoder.IBuilder encoder(IDecoderVideoStream decoder);
+
     IMuxer.IBuilder muxer(String format);
 
     interface IEncoder {

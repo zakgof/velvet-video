@@ -152,6 +152,12 @@ class FFMpegNative {
         public Pointer data = new Pointer();
         public Signed32 size = new Signed32();
         public Signed32 stream_index = new Signed32();
+        public Signed32 flags = new Signed32();
+     	public Pointer side_data = new Pointer();
+     	public Signed32 side_data_elems = new Signed32();
+     	public int64_t duration = new int64_t();
+     	public int64_t pos = new int64_t();
+     	public int64_t convergence_duration = new int64_t();
     }
 
     public static class AVCodecContext extends Struct {
@@ -587,6 +593,7 @@ class FFMpegNative {
 
         public  AVRational r_frame_rate = inner(new AVRational(getRuntime()));
 
+        public Pointer recommended_encoder_configuration = new Pointer();
         public Pointer codecpar = new Pointer();
         public Pointer info = new Pointer();
 
