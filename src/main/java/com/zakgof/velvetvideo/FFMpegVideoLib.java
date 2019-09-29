@@ -480,6 +480,7 @@ public class FFMpegVideoLib implements IVideoLib {
         	}
             scaleTime(packet.dts);
             scaleTime(packet.pts);
+            packet.duration.set(codecCtx.time_base.num.get() * containerTimeBaseDen / codecCtx.time_base.den.get() / containerTimeBaseNum);
         }
 
         private void scaleTime(int64_t ts) {

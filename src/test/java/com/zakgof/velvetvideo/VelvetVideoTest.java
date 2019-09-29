@@ -107,10 +107,10 @@ public class VelvetVideoTest {
 		BufferedImage[][] origs = { new BufferedImage[frames], new BufferedImage[frames] };
 		try (IMuxer muxer = lib.muxer("mp4")
 				.video("color", lib.encoder("mpeg4")
-			        .dimensions(640, 480)
+			      //  .dimensions(640, 480)
 				    .framerate(1))
 				.video("bw", lib.encoder("mpeg4")
-				     .dimensions(640, 480)
+				  //   .dimensions(640, 480)
 				     .framerate(1))
 				.build(file)) {
 
