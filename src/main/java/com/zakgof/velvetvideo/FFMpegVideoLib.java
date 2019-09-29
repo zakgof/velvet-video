@@ -519,6 +519,9 @@ public class FFMpegVideoLib implements IVideoLib {
             output.accept(packet);
 		}
 
+		public void close() {
+		}
+
     }
 
     @Override
@@ -625,6 +628,7 @@ public class FFMpegVideoLib implements IVideoLib {
             // flush encoders
             for (EncoderImpl encoder : videoStreams.values()) {
                 encoder.flush();
+                encoder.close();
             }
             // flush muxer
             checkcode(libavformat.av_write_frame(formatCtx, null));
