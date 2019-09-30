@@ -7,4 +7,5 @@
 !gradle-wrapper.jar
 .gradletasknamecache
 lombok.config
+openhere.cmd
 
