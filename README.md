@@ -27,7 +27,7 @@ The choice for native package is:
 
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video-core:0.0.2'
+    compile 'com.github.zakgof:velvet-video-core:0.1.0'
     compile 'com.github.zakgof:velvet-video-natives:0.0.1.full'
 }
 ````
