@@ -24,7 +24,7 @@ class FFMpegNative {
 
         AVPacket av_packet_alloc();
         void av_init_packet(AVPacket packet);
-        void av_packet_free(PointerByReference packet);
+        void av_packet_free(Pointer[] packet);
         void av_packet_unref(AVPacket packet);
 
         int avcodec_receive_packet(AVCodecContext avcontext, AVPacket packet);
@@ -44,11 +44,11 @@ class FFMpegNative {
         // void av_free_packet(AVPacket packet);
 
 
-        int avcodec_parameters_from_context(Pointer par, @In AVCodecContext codec);
+        int avcodec_parameters_from_context(@Out AVCodecParameters par, @In AVCodecContext codec);
+        int avcodec_parameters_to_context(@Out AVCodecContext codec, @In AVCodecParameters par);
+        int avcodec_parameters_copy(@Out AVCodecParameters out, @In AVCodecParameters in);
 
-        int avcodec_parameters_to_context(@Out AVCodecContext codec, Pointer par);
-
-        Pointer avcodec_parameters_alloc();
+        AVCodecParameters avcodec_parameters_alloc();
 
         void avcodec_parameters_free(PointerByReference par);
 
@@ -64,6 +64,10 @@ class FFMpegNative {
         int av_codec_is_decoder(AVCodec codec);
 
         void avcodec_flush_buffers(AVCodecContext context);
+        void avcodec_free_context(Pointer[] context);
+
+        int avcodec_close(AVCodecContext context);
+
     }
 
     public interface LibAVUtil {
@@ -77,11 +81,21 @@ class FFMpegNative {
 
         int av_strerror(int errnum, Pointer errbuf, int errbuf_size);
 
+
+
         int av_log_set_level(int val);
 
         Pointer av_malloc(@size_t int size);
 
         AVDictionaryEntry av_dict_get(@In Pointer dictionary, @In String key, @In AVDictionaryEntry prev, int flags);
+
+        // void av_log_set_callback(ILogger logger);
+
+//        interface ILogger {
+//        	  // JNR does not support varargs in callbacks
+//            @Delegate @StdCall void log(Pointer avcl, int level, String fmt, ??? vars);
+//        }
+
     }
 
     public interface LibAVFormat {
@@ -101,7 +115,7 @@ class FFMpegNative {
                                        IPacketIO writer,
                                        ISeeker seeker);
 
-        void avio_context_free(PointerByReference avioContext);
+        void avio_context_free(Pointer[] avioContext);
 
         int avformat_open_input(PointerByReference ctx, String url, AVInputFormat fmt, Pointer[] options);
 
@@ -147,6 +161,12 @@ class FFMpegNative {
         public Pointer data = new Pointer();
         public Signed32 size = new Signed32();
         public Signed32 stream_index = new Signed32();
+        public Signed32 flags = new Signed32();
+     	public Pointer side_data = new Pointer();
+     	public Signed32 side_data_elems = new Signed32();
+     	public int64_t duration = new int64_t();
+     	public int64_t pos = new int64_t();
+     	public int64_t convergence_duration = new int64_t();
     }
 
     public static class AVCodecContext extends Struct {
@@ -457,6 +477,8 @@ class FFMpegNative {
         AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
 
         int64_t pts = new int64_t();
+        int64_t pkt_pts = new int64_t();
+        int64_t pkt_dts = new int64_t();
     }
 
     public static class SwsContext extends Struct {
@@ -580,9 +602,10 @@ class FFMpegNative {
 
         public int32_t event_flags = new int32_t();
 
-        public  AVRational r_frame_rate = inner(new AVRational(getRuntime()));
+        public AVRational r_frame_rate = inner(new AVRational(getRuntime()));
 
-        public Pointer codecpar = new Pointer();
+        public Pointer recommended_encoder_configuration = new Pointer();
+        public StructRef<AVCodecParameters> codecpar = new StructRef<AVCodecParameters>(AVCodecParameters.class);
         public Pointer info = new Pointer();
 
         public Signed32 pts_wrap_bits = new Signed32();  /**< number of bits in pts (used for wrapping control) */

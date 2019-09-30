@@ -39,11 +39,11 @@ dependencies {
 ````java
     IVideoLib lib = new FFMpegVideoLib();
     try (IMuxer muxer = lib.muxer("matroska")
-        .video("video1", lib.encoder("av1").bitrate(100000))
+        .video(lib.encoder("av1").bitrate(100000))
         .build(new File("/some/path/output.mkv"))) {            
-           muxer.video("video1").encode(image1, 0);
-           muxer.video("video1").encode(image2, 1);
-           muxer.video("video1").encode(image3, 2);
+           muxer.video(0).encode(image1, 0);
+           muxer.video(0).encode(image2, 1);
+           muxer.video(0).encode(image3, 2);
     }      
 ````
 ### Obtain images from a video:
@@ -51,7 +51,7 @@ dependencies {
 ````java
 	IVideoLib lib = new FFMpegVideoLib();
 	try (IDemuxer demuxer = lib.demuxer(new File("/some/path/example.mp4"))) {
-	    IDecoderVideoStream videoStream = demuxer.videos().get(0);
+	    IDecoderVideoStream videoStream = demuxer.video(0);
 	    IFrame videoFrame;
 	    while ((videoFrame = videoStream.nextFrame()) != null) {
 	   	    BufferedImage image = videoFrame.image();

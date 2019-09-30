@@ -36,8 +36,8 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 
         BufferedImage[] orig = createSingleStreamVideo(codec, format, file, FRAMES);
 
-        double dff = diff(orig[0], orig[3]);
-        System.err.println("[0] to [3] " + dff);
+        double dff = diff(orig[0], orig[1]);
+        System.err.println("[0] to [1] " + dff);
         try (IDemuxer demuxer = lib.demuxer(file)) {
             int i = 0;
 			for (IDecodedPacket packet : demuxer) {
@@ -64,7 +64,7 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 	public void testEncodeDecodeTwoStreams() throws IOException {
 
 		File file = dir.resolve("two.mp4").toFile();
-		BufferedImage[][] origs = createTwoStreamVideo(file, FRAMES);
+		BufferedImage[][] origs = createTwoStreamVideo(file, FRAMES, "mpeg4", "mp4");
 
 		int colorindex = 0;
 		int bwindex = 0;

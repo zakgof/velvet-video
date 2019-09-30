@@ -16,11 +16,15 @@ public interface IVideoLib {
 
     IEncoder.IBuilder encoder(String format);
 
+    IEncoder.IBuilder encoder(IDecoderVideoStream decoder);
+
     IMuxer.IBuilder muxer(String format);
 
     interface IEncoder {
 
-        void encode(BufferedImage bi, long pts);
+        void encode(BufferedImage bi);
+
+        void encode(BufferedImage image, int duration);
 
         void writeRaw(byte[] packetData);
 
@@ -39,6 +43,8 @@ public interface IVideoLib {
 
         }
 
+
+
     }
 
     interface IEncoderStream extends AutoCloseable {
@@ -52,21 +58,20 @@ public interface IVideoLib {
 
         interface IBuilder {
 
-            IMuxer.IBuilder video(String name, IEncoder.IBuilder encoderBuilder);
+            IMuxer.IBuilder video(IEncoder.IBuilder encoderBuilder);
+            IMuxer.IBuilder video(IDecoderVideoStream decoder);
 
             IBuilder metadata(String key, String value);
 
             IMuxer build(File outputFile);
 
             IMuxer build(ISeekableOutput output);
-
-            // IEncoder.IBuilder video(String codec);
         }
 
         @Override
 		void close();
 
-        IEncoder video(String name);
+        IEncoder video(int index);
     }
 
     IDemuxer demuxer(InputStream is);
@@ -94,7 +99,7 @@ public interface IVideoLib {
         @Override
         Iterator<IDecodedPacket> iterator();
 
-		IDecoderVideoStream videoStream(String streamName);
+		IDecoderVideoStream video(int index);
     }
 
     interface IDecodedPacket {
@@ -120,6 +125,8 @@ public interface IVideoLib {
         IDecoderVideoStream seekNano(long ns);
 
 		byte[] nextRawPacket();
+
+		int index();
     }
 
     interface IFrame {
