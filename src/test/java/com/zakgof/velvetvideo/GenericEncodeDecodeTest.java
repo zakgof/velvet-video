@@ -64,7 +64,7 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 	public void testEncodeDecodeTwoStreams() throws IOException {
 
 		File file = dir.resolve("two.mp4").toFile();
-		BufferedImage[][] origs = createTwoStreamVideo(file, FRAMES);
+		BufferedImage[][] origs = createTwoStreamVideo(file, FRAMES, "mpeg4", "mp4");
 
 		int colorindex = 0;
 		int bwindex = 0;

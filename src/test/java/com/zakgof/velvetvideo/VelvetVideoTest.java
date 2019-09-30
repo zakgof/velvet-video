@@ -80,6 +80,8 @@ public class VelvetVideoTest {
 	}
 
 	protected void assertEqual(BufferedImage im1, BufferedImage im2) {
+		Assertions.assertEquals(im1.getWidth(), im2.getWidth());
+		Assertions.assertEquals(im1.getHeight(), im2.getHeight());
 		double diff = diff(im1, im2);
 		Assertions.assertEquals(0, diff, 1.0);
 	}
@@ -87,38 +89,56 @@ public class VelvetVideoTest {
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
 		try (IMuxer muxer = lib.muxer(format)
-				.video("dflt", lib.encoder(codec)
+				.video(lib.encoder(codec)
 					.bitrate(3000000)
 					.dimensions(640, 480)
-					.framerate(30)
+					.framerate(25)
 					.enableExperimental())
 				.build(file)) {
 			for (int i = 0; i < orig.length; i++) {
 				BufferedImage image = colorImage(i);
-				muxer.video("dflt").encode(image, i);
+				muxer.video(0).encode(image);
 				orig[i] = image;
 			}
 		}
 		return orig;
 	}
 
-	protected BufferedImage[][] createTwoStreamVideo(File file, int frames) {
+	protected BufferedImage[] createVariableFrameDurationVideo(String codec, String format, File file, int frames) {
+		BufferedImage[] orig = new BufferedImage[frames];
+		try (IMuxer muxer = lib.muxer(format)
+				.video(lib.encoder(codec)
+					.bitrate(4000000)
+					.dimensions(640, 480)
+					.framerate(50)
+					.enableExperimental())
+				.build(file)) {
+			for (int i = 0; i < orig.length; i++) {
+				BufferedImage image = colorImage(i);
+				muxer.video(0).encode(image, i);
+				orig[i] = image;
+			}
+		}
+		return orig;
+	}
+
+	protected BufferedImage[][] createTwoStreamVideo(File file, int frames, String codec, String format) {
 		System.err.println(file);
 		BufferedImage[][] origs = { new BufferedImage[frames], new BufferedImage[frames] };
-		try (IMuxer muxer = lib.muxer("mp4")
-				.video("color", lib.encoder("mpeg4")
-			      //  .dimensions(640, 480)
-				    .framerate(1))
-				.video("bw", lib.encoder("mpeg4")
-				  //   .dimensions(640, 480)
-				     .framerate(1))
+		try (IMuxer muxer = lib.muxer(format)
+				.video(lib.encoder(codec)
+			        .dimensions(640, 480)
+				    .framerate(30))
+				.video(lib.encoder(codec)
+				     .dimensions(640, 480)
+				     .framerate(30))
 				.build(file)) {
 
 			for (int i = 0; i < frames; i++) {
 				BufferedImage color = colorImage(i);
 				BufferedImage bw = bwImage(i);
-				muxer.video("color").encode(color, i);
-				muxer.video("bw").encode(bw, i);
+				muxer.video(0).encode(color);
+				muxer.video(1).encode(bw);
 				origs[0][i] = color;
 				origs[1][i] = bw;
 			}

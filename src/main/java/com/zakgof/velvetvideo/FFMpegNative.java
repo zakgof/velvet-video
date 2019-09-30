@@ -24,7 +24,7 @@ class FFMpegNative {
 
         AVPacket av_packet_alloc();
         void av_init_packet(AVPacket packet);
-        void av_packet_free(PointerByReference packet);
+        void av_packet_free(Pointer[] packet);
         void av_packet_unref(AVPacket packet);
 
         int avcodec_receive_packet(AVCodecContext avcontext, AVPacket packet);
@@ -44,9 +44,9 @@ class FFMpegNative {
         // void av_free_packet(AVPacket packet);
 
 
-        int avcodec_parameters_from_context(AVCodecParameters par, @In AVCodecContext codec);
-
-        int avcodec_parameters_to_context(@Out AVCodecContext codec, AVCodecParameters par);
+        int avcodec_parameters_from_context(@Out AVCodecParameters par, @In AVCodecContext codec);
+        int avcodec_parameters_to_context(@Out AVCodecContext codec, @In AVCodecParameters par);
+        int avcodec_parameters_copy(@Out AVCodecParameters out, @In AVCodecParameters in);
 
         AVCodecParameters avcodec_parameters_alloc();
 
@@ -81,11 +81,21 @@ class FFMpegNative {
 
         int av_strerror(int errnum, Pointer errbuf, int errbuf_size);
 
+
+
         int av_log_set_level(int val);
 
         Pointer av_malloc(@size_t int size);
 
         AVDictionaryEntry av_dict_get(@In Pointer dictionary, @In String key, @In AVDictionaryEntry prev, int flags);
+
+        // void av_log_set_callback(ILogger logger);
+
+//        interface ILogger {
+//        	  // JNR does not support varargs in callbacks
+//            @Delegate @StdCall void log(Pointer avcl, int level, String fmt, ??? vars);
+//        }
+
     }
 
     public interface LibAVFormat {
@@ -467,6 +477,8 @@ class FFMpegNative {
         AVRational sample_aspect_ratio = inner(new AVRational(getRuntime()));
 
         int64_t pts = new int64_t();
+        int64_t pkt_pts = new int64_t();
+        int64_t pkt_dts = new int64_t();
     }
 
     public static class SwsContext extends Struct {

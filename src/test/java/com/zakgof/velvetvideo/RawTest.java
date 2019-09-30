@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
 import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
@@ -18,23 +20,58 @@ public class RawTest extends VelvetVideoTest {
 
 	private static final int FRAMES = 10;
 
-	@Test
-	public void testRemux() throws IOException {
-		File file = dir.resolve("orig.avi").toFile();
-		File remuxed = dir.resolve("remuxed.mp4").toFile();
+	 @ParameterizedTest
+	    @CsvSource({
+
+	         "ffv1,         avi",
+	         "flv,          flv",
+	         "h263p,        avi",
+	         "mjpeg,        avi",
+
+	         "msmpeg4,      avi",
+	         "msmpeg4v2,    avi",
+	         "msmpeg4v2,    matroska",
+
+	         "libx264,      mp4",
+	         "libx264,      avi",
+	         "libx264,      mov",
+	     //  "libx264,      matroska", // FAIL - Invalid data
+
+	         "libopenh264,  avi",
+	         "libopenh264,  mov",
+	         "libopenh264,  mp4",
+	     //  "libopenh264,  matroska", // FAIL - Invalid data
+
+	         "libx265,      mp4",
+	         "libx265,      matroska",
+	         "wmv1,         avi",
+	         "wmv2,         avi",
+	         "mjpeg,        avi",
+	         "mpeg1video,   avi",
+	         "mpeg2video,   avi",
+	         "mpeg4,        mp4",
+	         "libvpx,        webm",
+	         "libvpx-vp9,    webm",
+	         "libvpx,        ogg",
+	         "libvpx,        matroska",
+	         "libvpx-vp9,    matroska",
+	    })
+	public void testRemux(String codec, String format) throws IOException {
+		File file = dir.resolve("orig-" + codec + "." + format).toFile();
+		File remuxed = dir.resolve("remuxed-" + codec + "." + format).toFile();
 		System.err.println(file + "->" + remuxed);
 
 		// Create and read original AVI
-		createSingleStreamVideo("libx264", "avi", file, FRAMES);
+		createSingleStreamVideo(codec, format, file, FRAMES);
 		List<BufferedImage> rest1 = loadFrames(file, FRAMES);
 
 		// Remux raw stream to MP4
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			IDecoderVideoStream origStream = demuxer.videoStream("video0"); // TODO: this is bug: stream names are not saved to AVIs
-			try (IMuxer muxer = lib.muxer("mp4").video("dflt", lib.encoder("libx264")).build(remuxed)) {
+			IDecoderVideoStream origStream = demuxer.video(0);
+			try (IMuxer muxer = lib.muxer(format).video(origStream).build(remuxed)) {
 				byte[] rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
-					muxer.video("dflt").writeRaw(rawPacket);
+					muxer.video(0).writeRaw(rawPacket);
 				}
 			}
 		}
@@ -62,14 +99,14 @@ public class RawTest extends VelvetVideoTest {
 		// Remux raw streams
 		int TIMES = 4;
 		try (IMuxer muxer = lib.muxer("mp4")
-		    .video("dflt", lib.encoder("libx264"))
+		    .video(lib.demuxer(file).video(0))
 		    .build(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
 				try (IDemuxer demuxer = lib.demuxer(file)) {
 					IDecoderVideoStream origStream = demuxer.videos().get(0);
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
-						muxer.video("dflt").writeRaw(rawPacket);
+						muxer.video(0).writeRaw(rawPacket);
 					}
 				}
 			}
@@ -84,12 +121,15 @@ public class RawTest extends VelvetVideoTest {
 					assertEqual(remuxedImage, original.get(i));
 				}
 			}
-			IVideoStreamProperties mergedStreamProperties = demuxer.videoStream("dflt").properties();
-			IVideoStreamProperties originalStreamProperties = lib.demuxer(file).videoStream("dflt").properties();
-			Assertions.assertEquals(originalStreamProperties.duration() * TIMES, mergedStreamProperties.duration(), 1.0);
+			IVideoStreamProperties mergedStreamProperties = demuxer.video(0).properties();
+			IVideoStreamProperties originalStreamProperties = lib.demuxer(file).video(0).properties();
+			Assertions.assertEquals(originalStreamProperties.width(), mergedStreamProperties.width());
+			Assertions.assertEquals(originalStreamProperties.height(), mergedStreamProperties.height());
+
 			Assertions.assertEquals(originalStreamProperties.frames() * TIMES, mergedStreamProperties.frames());
 			Assertions.assertEquals(originalStreamProperties.framerate(), mergedStreamProperties.framerate(), 0.001);
-			Assertions.assertEquals(originalStreamProperties.height(), mergedStreamProperties.height());
+
+			Assertions.assertEquals(originalStreamProperties.duration() * TIMES, mergedStreamProperties.duration(), 1.0);
 		}
 	}
 }
