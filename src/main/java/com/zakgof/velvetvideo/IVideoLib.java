@@ -133,6 +133,7 @@ public interface IVideoLib {
         IDecoderVideoStream stream();
         BufferedImage image();
         long nanostamp();
+		long nanoduration();
     }
 
     interface IMuxerProperties {

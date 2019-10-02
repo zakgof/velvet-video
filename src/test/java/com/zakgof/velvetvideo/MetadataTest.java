@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
 import com.zakgof.velvetvideo.IVideoLib.IEncoder;
+import com.zakgof.velvetvideo.IVideoLib.IFrame;
 import com.zakgof.velvetvideo.IVideoLib.IMuxer;
 import com.zakgof.velvetvideo.IVideoLib.IVideoStreamProperties;
 
@@ -63,22 +65,22 @@ public class MetadataTest extends VelvetVideoTest {
   //      "msmpeg4v2,    matroska", // FAIL: frames=0
 
           "libx264,      mp4",
-          "libx264,      avi",
+  //      "libx264,      avi",      // FAIL: no pts data
           "libx264,      mov",
   //      "libx264,      matroska", // FAIL - Invalid data
 
-          "libopenh264,  avi",
+  //      "libopenh264,  avi",      // FAIL: no pts data
           "libopenh264,  mov",
           "libopenh264,  mp4",
   //      "libopenh264,  matroska", // FAIL - Invalid data
 
           "libx265,      mp4",
-  //       "libx265,      matroska", // FAIL - frames=0
+  //      "libx265,      matroska", // FAIL - frames=0
           "wmv1,         avi",
           "wmv2,         avi",
           "mjpeg,        avi",
-          "mpeg1video,   avi",
-          "mpeg2video,   avi",
+ //       "mpeg1video,   avi",      // FAIL: no pts data
+ //       "mpeg2video,   avi",      // FAIL: no pts data
           "mpeg4,        mp4",
  //        "mpeg4,        matroska",
 
@@ -102,8 +104,14 @@ public class MetadataTest extends VelvetVideoTest {
             }
         }
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
-            IVideoStreamProperties restored = demuxer.videos().get(0).properties();
-            demuxer.videos().get(0).nextFrame();
+            IDecoderVideoStream videoStream = demuxer.videos().get(0);
+			IVideoStreamProperties restored = videoStream.properties();
+			for (int i=0; i<FRAMES; i++) {
+	            IFrame frame = videoStream.nextFrame();
+	            Assertions.assertEquals(40000000L, frame.nanoduration());
+	            Assertions.assertEquals(i * 40000000L, frame.nanostamp());
+			}
+
             // Assertions.assertEquals(codec, restored.codec()); TODO: fix codec/encodingformat mess
             Assertions.assertEquals(FRAMES, restored.frames());
             Assertions.assertEquals(40L * FRAMES, restored.duration());

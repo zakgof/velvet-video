@@ -857,7 +857,7 @@ public class FFMpegVideoLib implements IVideoLib {
 
             private final AVStream avstream;
             private final String name;
-            private AVCodecContext codecCtx;
+            private final AVCodecContext codecCtx;
 
             private FrameHolder frameHolder;
             private int index;
@@ -873,8 +873,15 @@ public class FFMpegVideoLib implements IVideoLib {
             }
 
             private IFrame frameOf(BufferedImage bi) {
-                long nanostamp = frameHolder.frame.pts.get() * 1000000000L * avstream.time_base.num.get() / avstream.time_base.den.get();
-                return new Frame(bi, nanostamp, this);
+                long pts = frameHolder.frame.pts.get();
+                if (pts == AVNOPTS_VALUE) {
+                	pts = 0;
+                }
+                long tickns = 1000000000L * avstream.time_base.num.get() / avstream.time_base.den.get();
+				long nanostamp = pts * tickns;
+                long duration = libavutil.av_frame_get_pkt_duration(frameHolder.frame);
+                long nanoduration = duration * tickns;
+                return new Frame(bi, nanostamp, nanoduration, this);
             }
 
             /**
@@ -1063,6 +1070,7 @@ public class FFMpegVideoLib implements IVideoLib {
 class Frame implements IFrame {
     private final BufferedImage image;
     private final long nanostamp;
+    private final long nanoduration;
     private final IDecoderVideoStream stream;
 
     @Override

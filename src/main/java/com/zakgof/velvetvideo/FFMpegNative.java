@@ -88,6 +88,7 @@ class FFMpegNative {
         Pointer av_malloc(@size_t int size);
 
         AVDictionaryEntry av_dict_get(@In Pointer dictionary, @In String key, @In AVDictionaryEntry prev, int flags);
+		long av_frame_get_pkt_duration(AVFrame frame);
 
         // void av_log_set_callback(ILogger logger);
 
