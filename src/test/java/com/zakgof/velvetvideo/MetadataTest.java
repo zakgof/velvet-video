@@ -114,7 +114,7 @@ public class MetadataTest extends VelvetVideoTest {
 
             // Assertions.assertEquals(codec, restored.codec()); TODO: fix codec/encodingformat mess
             Assertions.assertEquals(FRAMES, restored.frames());
-            Assertions.assertEquals(40L * FRAMES, restored.duration());
+            Assertions.assertEquals(40L * FRAMES * 1000000L, restored.nanoduration());
             Assertions.assertEquals(640, restored.width());
             Assertions.assertEquals(480, restored.height());
             Assertions.assertEquals(25.0, restored.framerate(), 0.01);

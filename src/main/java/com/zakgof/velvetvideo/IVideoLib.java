@@ -143,7 +143,7 @@ public interface IVideoLib {
     interface IVideoStreamProperties {
         String codec();
         double framerate();
-        long duration();
+        long nanoduration();
         long frames();
         int width();
         int height();

@@ -288,13 +288,13 @@ public class FFMpegVideoLib implements IVideoLib {
     private class EncoderBuilderImpl implements IBuilder {
 
         private String codec;
-        private int timebaseNum = 1;
-        private int timebaseDen = 30;
-        private int bitrate = 400000;
+        private Integer timebaseNum;
+        private Integer timebaseDen;
+        private Integer bitrate;
         private Map<String, String> params = new HashMap<>();
         private Map<String, String> metadata = new HashMap<>();
-        private int width = 1;
-        private int height = 1;
+        private Integer width;
+        private Integer height;
         private boolean enableExperimental;
 		private IDecoderVideoStream decoder;
 
@@ -370,67 +370,65 @@ public class FFMpegVideoLib implements IVideoLib {
 
         private FrameHolder frameHolder;
         private long nextPts = 0;
-        private long nextDts = 0;
 		private boolean codecOpened;
 		private int defaultFrameDuration;
         private int streamIndex;
 
-		public EncoderImpl(AVStream inputAVStream, AVCodecContext inputCodecCtx, AVFormatContext formatCtx, Consumer<AVPacket> output) {
-			this.codecCtx = null;
-			this.codecOpts = null;
-			this.codec = null;
-
-			this.output = output;
-
-			this.stream = libavformat.avformat_new_stream(formatCtx, null);
-        	checkcode(libavcodec.avcodec_parameters_copy(stream.codecpar.get(), inputAVStream.codecpar.get()));
-        	stream.codecpar.get().codec_tag.set(0);
-
-        	this.packet = libavcodec.av_packet_alloc();
-
-        	this.codecTimeBaseDen = inputCodecCtx.time_base.den.get();
-        	this.codecTimeBaseNum = inputCodecCtx.time_base.num.get() * inputCodecCtx.ticks_per_frame.get();
-		}
-
         public EncoderImpl(EncoderBuilderImpl builder, AVFormatContext formatCtx, Consumer<AVPacket> output) {
 			this.output = output;
-            this.codec = libavcodec.avcodec_find_encoder_by_name(builder.codec);
-            if (this.codec == null && builder.decoder == null) {
-                throw new VelvetVideoException("Unknown video codec: " + builder.codec);
-            }
-            this.stream = libavformat.avformat_new_stream(formatCtx, codec);
+			this.packet = libavcodec.av_packet_alloc();
+			this.codecOpts = createDictionary(builder.params);
+			if (builder.decoder != null) {
+				this.codecCtx = null;
+				this.codec = null;
+				this.stream = libavformat.avformat_new_stream(formatCtx, null);
+				DemuxerImpl.DecoderVideoStreamImpl decoderImpl = (DemuxerImpl.DecoderVideoStreamImpl) builder.decoder;
+				checkcode(libavcodec.avcodec_parameters_copy(stream.codecpar.get(), decoderImpl.avstream.codecpar.get()));
+	        	stream.codecpar.get().codec_tag.set(0);
+	        	int timeBaseNum = builder.timebaseNum == null ? decoderImpl.codecCtx.time_base.num.get() * decoderImpl.codecCtx.ticks_per_frame.get(): builder.timebaseNum;
+	        	int timeBaseDen = builder.timebaseDen == null ? decoderImpl.codecCtx.time_base.den.get() : builder.timebaseDen;
+	        	if (builder.bitrate != null) {
+	        		logEncoder.atWarn().log("Ignored bitrate for a non-encoding stream");
+	        	}
+	        	stream.time_base.num.set(timeBaseNum);
+	            stream.time_base.den.set(timeBaseDen);
+	            this.codecTimeBaseNum = timeBaseNum;
+	            this.codecTimeBaseDen = timeBaseDen;
+			} else {
+	            this.codec = libavcodec.avcodec_find_encoder_by_name(builder.codec);
+	            if (this.codec == null && builder.decoder == null) {
+	                throw new VelvetVideoException("Unknown video codec: " + builder.codec);
+	            }
+	            this.stream = libavformat.avformat_new_stream(formatCtx, codec);
 
-            this.codecCtx = libavcodec.avcodec_alloc_context3(codec);
-            if ((formatCtx.ctx_flags.get() & AVFMT_GLOBALHEADER) != 0) {
-            	codecCtx.flags.set(codecCtx.flags.get() | CODEC_FLAG_GLOBAL_HEADER);
-            }
+	            this.codecCtx = libavcodec.avcodec_alloc_context3(codec);
+	            if ((formatCtx.ctx_flags.get() & AVFMT_GLOBALHEADER) != 0) {
+	            	codecCtx.flags.set(codecCtx.flags.get() | CODEC_FLAG_GLOBAL_HEADER);
+	            }
+	            codecCtx.codec_id.set(codec.id.get());
+	            codecCtx.codec_type.set(codec.type.get());
+	            codecCtx.bit_rate.set(builder.bitrate == null ? 400000 : builder.bitrate);
+	            codecCtx.time_base.num.set(builder.timebaseNum == null ? 1 : builder.timebaseNum);
+	            codecCtx.time_base.den.set(builder.timebaseDen == null ? 30 : builder.timebaseDen);
+	            int firstFormat = codec.pix_fmts.get().getInt(0);
+	            codecCtx.pix_fmt.set(firstFormat); // TODO ?
+	            codecCtx.width.set(builder.width == null ? 1 : builder.width);
+	            codecCtx.height.set(builder.height == null ? 1 : builder.height);
+	            if (builder.enableExperimental) {
+	            	codecCtx.strict_std_compliance.set(-2);
+	            }
+	            Pointer[] metadata = createDictionary(builder.metadata);
+	            stream.metadata.set(metadata[0]);
+	            checkcode(libavcodec.avcodec_parameters_from_context(stream.codecpar.get(), codecCtx));
 
-            this.codecOpts = createDictionary(builder.params);
+	            stream.time_base.num.set(codecCtx.time_base.num.get());
+	            stream.time_base.den.set(codecCtx.time_base.den.get());
+	            stream.index.set(formatCtx.nb_streams.get() - 1);
+	            stream.id.set(formatCtx.nb_streams.get() - 1);
 
-            codecCtx.codec_id.set(codec.id.get());
-            codecCtx.codec_type.set(codec.type.get());
-            codecCtx.bit_rate.set(builder.bitrate);
-            codecCtx.time_base.num.set(builder.timebaseNum);
-            codecCtx.time_base.den.set(builder.timebaseDen);
-            int firstFormat = codec.pix_fmts.get().getInt(0);
-            codecCtx.pix_fmt.set(firstFormat); // TODO ?
-            codecCtx.width.set(builder.width);
-            codecCtx.height.set(builder.height);
-            if (builder.enableExperimental) {
-            	codecCtx.strict_std_compliance.set(-2);
-            }
-            Pointer[] metadata = createDictionary(builder.metadata);
-            stream.metadata.set(metadata[0]);
-            checkcode(libavcodec.avcodec_parameters_from_context(stream.codecpar.get(), codecCtx));
-
-            stream.time_base.num.set(codecCtx.time_base.num.get());
-            stream.time_base.den.set(codecCtx.time_base.den.get());
-            stream.index.set(formatCtx.nb_streams.get() - 1);
-            stream.id.set(formatCtx.nb_streams.get() - 1);
-
-            this.packet = libavcodec.av_packet_alloc();
-        	this.codecTimeBaseNum = codecCtx.time_base.num.get();
-            this.codecTimeBaseDen = codecCtx.time_base.den.get();
+	        	this.codecTimeBaseNum = codecCtx.time_base.num.get();
+	            this.codecTimeBaseDen = codecCtx.time_base.den.get();
+			}
         }
 
 		public void init() {
@@ -618,14 +616,7 @@ public class FFMpegVideoLib implements IVideoLib {
             };
 
             this.videoStreams = builder.videos.stream()
-            	.map(encoderBuilder -> {
-            		if (encoderBuilder.decoder == null) {
-            			return new EncoderImpl(encoderBuilder, formatCtx, packetStream);
-            		} else {
-            			DemuxerImpl.DecoderVideoStreamImpl impl = (DemuxerImpl.DecoderVideoStreamImpl)encoderBuilder.decoder;
-            			return new EncoderImpl(impl.avstream, impl.codecCtx, formatCtx, packetStream);
-            		}
-            	})
+            	.map(encoderBuilder -> new EncoderImpl(encoderBuilder, formatCtx, packetStream))
             	.collect(Collectors.toList());
 
             checkcode(libavformat.avformat_write_header(formatCtx, null));
@@ -877,10 +868,9 @@ public class FFMpegVideoLib implements IVideoLib {
                 if (pts == AVNOPTS_VALUE) {
                 	pts = 0;
                 }
-                long tickns = 1000000000L * avstream.time_base.num.get() / avstream.time_base.den.get();
-				long nanostamp = pts * tickns;
+				long nanostamp = pts * 1000000000L * avstream.time_base.num.get() / avstream.time_base.den.get();
                 long duration = libavutil.av_frame_get_pkt_duration(frameHolder.frame);
-                long nanoduration = duration * tickns;
+                long nanoduration = duration * 1000000000L * avstream.time_base.num.get() / avstream.time_base.den.get();
                 return new Frame(bi, nanostamp, nanoduration, this);
             }
 
@@ -952,7 +942,7 @@ public class FFMpegVideoLib implements IVideoLib {
             public IVideoStreamProperties properties() {
                 int timebase_n = avstream.time_base.num.get();
                 int timebase_d = avstream.time_base.den.get();
-                long duration = avstream.duration.get() * 1000L * timebase_n / timebase_d;
+                long duration = avstream.duration.get() * 1000000000L * timebase_n / timebase_d;
                 long frames = avstream.nb_frames.get();
                 int width = codecCtx.width.get();
                 int height = codecCtx.height.get();
@@ -1093,7 +1083,7 @@ class MuxerProperties implements IMuxerProperties {
 class VideoStreamProperties implements IVideoStreamProperties {
     private final String codec;
     private final double framerate;
-    private final long duration;
+    private final long nanoduration;
     private final long frames;
     private final int width;
     private final int height;
