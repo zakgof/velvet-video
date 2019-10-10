@@ -148,6 +148,24 @@ class FFMpegNative {
         int av_seek_frame(AVFormatContext context, int stream_index, long timestamp, int flags);
 
     }
+    
+	public interface LibAVFilter {
+		
+		AVFilter avfilter_next(AVFilter prev);	
+
+		AVFilterGraph avfilter_graph_alloc();
+
+		AVFilter avfilter_get_by_name(String name);
+
+		AVFilterContext avfilter_graph_alloc_filter(AVFilterGraph graph, AVFilter filter, String name);
+		
+		int avfilter_graph_config (AVFilterGraph graphctx, Pointer log_ctx); 
+
+		void avfilter_free(AVFilterContext filter);
+		
+		void avfilter_graph_free (Pointer ppgraph);
+
+	}
 
     public static class AVPacket extends Struct {
 
@@ -637,6 +655,24 @@ class FFMpegNative {
 
         public String key = new UTF8StringRef();
         public String value = new UTF8StringRef();
+    }
+    
+    public static class AVFilter extends Struct {
+        public AVFilter(Runtime runtime) {
+            super(runtime);
+        }
+    }
+    
+    public static class AVFilterGraph extends Struct {
+        public AVFilterGraph(Runtime runtime) {
+            super(runtime);
+        }
+    }
+    
+    public static class AVFilterContext extends Struct {
+        public AVFilterContext(Runtime runtime) {
+            super(runtime);
+        }
     }
 
 }
