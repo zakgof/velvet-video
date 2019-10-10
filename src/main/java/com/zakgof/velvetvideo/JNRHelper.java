@@ -1,6 +1,7 @@
 package com.zakgof.velvetvideo;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -9,6 +10,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Properties;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
@@ -24,27 +26,49 @@ import jnr.ffi.provider.ParameterFlags;
 
 class JNRHelper {
 
+	private static String MIN_NATIVE_VERSION = "0.1.0";
 
 	private static Logger LOG = LoggerFactory.getLogger("velvet-video");
     private static String PLATFORM = getPlatform();
-    private static File extractionDir = createExtractionDirectory();
+    private static File extractionDir = initializeExtractionDirectory();
 
-	private static File createExtractionDirectory() {
+    private static File initializeExtractionDirectory() {
+    	String path = "velvet-video-binaries/version.inf";
+		URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
+    	if (resource == null) {
+    		throw new VelvetVideoException("Cannot locate native libs. Make sure that velvet-video-natives in on classpath.");
+    	}
+    	File location = locationFor(resource);
+        try (FileInputStream fos = new FileInputStream(location)) {
+        	Properties props = new Properties();
+        	props.load(fos);
+        	String version = props.getProperty("Version");
+        	LOG.info("Loading velvet-video-natives version " + version);
+        	if (version.compareTo(MIN_NATIVE_VERSION) < 0) {
+        		throw new VelvetVideoException("Minimum compatible version of velvet-video-natives is " + MIN_NATIVE_VERSION + ", detected version " + version);
+        	}
+        	return createExtractionDirectory(version);
+        } catch (IOException e) {
+			throw new VelvetVideoException("Error while loading native version manifest", e);
+		}
+	}
+
+	private static File createExtractionDirectory(String version) {
 		String home = System.getProperty("user.home");
-		File dir = Paths.get(home, ".velvet-video", "natives", "0.0.0").toFile(); // TODO
+		File dir = Paths.get(home, ".velvet-video", "natives", version).toFile();
 		if (!dir.exists() && !dir.mkdirs()) {
 			throw new VelvetVideoException("Cannot create a dir for extracting native libraries.");
 		}
 		return dir;
 	}
 
-    static <L> L load(Class<L> clazz, String libName) {
+	static <L> L load(Class<L> clazz, String libName) {
 
         try {
 
         	Platform nativePlatform = Platform.getNativePlatform();
             String libfile = nativePlatform.mapLibraryName(libName);
-        	String folder = "binaries/" + PLATFORM + "/";
+        	String folder = "velvet-video-binaries/" + PLATFORM + "/";
 			String path = folder + libfile;
 			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
         	if (resource == null) {
@@ -65,7 +89,7 @@ class JNRHelper {
                                 throw new VelvetVideoException("Error extracting ffmpeg native libraries");
                             }
                         });
-                }  catch (IOException e) {
+                } catch (IOException e) {
                     throw new VelvetVideoException("Error extracting ffmpeg native libraries");
                 }
             }

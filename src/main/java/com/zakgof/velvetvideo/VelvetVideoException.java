@@ -11,4 +11,8 @@ public class VelvetVideoException extends RuntimeException {
 	public VelvetVideoException(Throwable causedBy) {
 		super(causedBy);
 	}
+
+	public VelvetVideoException(String message, Throwable causedBy) {
+		super(message, causedBy);
+	}
 }
