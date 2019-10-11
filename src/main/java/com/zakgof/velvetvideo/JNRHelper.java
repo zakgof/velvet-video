@@ -1,13 +1,13 @@
 package com.zakgof.velvetvideo;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
@@ -26,22 +26,24 @@ import jnr.ffi.provider.ParameterFlags;
 
 class JNRHelper {
 
-	private static String MIN_NATIVE_VERSION = "0.1.0";
+	private static String MIN_NATIVE_VERSION = "0.2.0";
 
 	private static Logger LOG = LoggerFactory.getLogger("velvet-video");
     private static String PLATFORM = getPlatform();
     private static File extractionDir = initializeExtractionDirectory();
 
     private static File initializeExtractionDirectory() {
-    	String path = "velvet-video-binaries/version.inf";
+    	String path = "velvet-video-natives/version.inf";
 		URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
     	if (resource == null) {
     		throw new VelvetVideoException("Cannot locate native libs. Make sure that velvet-video-natives in on classpath.");
     	}
-    	File location = locationFor(resource);
-        try (FileInputStream fos = new FileInputStream(location)) {
+    	try {
+	    	URLConnection connection = resource.openConnection();
+	    	connection.connect();
+	    	InputStream is = connection.getInputStream();
         	Properties props = new Properties();
-        	props.load(fos);
+        	props.load(is);
         	String version = props.getProperty("Version");
         	LOG.info("Loading velvet-video-natives version " + version);
         	if (version.compareTo(MIN_NATIVE_VERSION) < 0) {
@@ -68,7 +70,7 @@ class JNRHelper {
 
         	Platform nativePlatform = Platform.getNativePlatform();
             String libfile = nativePlatform.mapLibraryName(libName);
-        	String folder = "velvet-video-binaries/" + PLATFORM + "/";
+        	String folder = "velvet-video-natives/" + PLATFORM + "/";
 			String path = folder + libfile;
 			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
         	if (resource == null) {
