@@ -10,11 +10,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
-import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
-import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
-import com.zakgof.velvetvideo.IVideoLib.IFrame;
-
 public class SeekTest extends VelvetVideoTest {
 
 	private static final int FRAMES = 10;

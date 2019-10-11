@@ -9,20 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
-import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
-import com.zakgof.velvetvideo.IVideoLib.IEncoder;
-import com.zakgof.velvetvideo.IVideoLib.IFrame;
-import com.zakgof.velvetvideo.IVideoLib.IMuxer;
-import com.zakgof.velvetvideo.IVideoLib.IVideoStreamProperties;
-
 public class MetadataTest extends VelvetVideoTest {
 
     @Test
     public void testStreamMetadata() throws IOException {
         Path file = dir.resolve("stream-metadata.mp4");
         System.err.println(file);
-        try (IMuxer muxer = lib.muxer("mp4").video(lib.encoder("mpeg4")
+        try (IMuxer muxer = lib.muxer("mp4").video(lib.videoEncoder("mpeg4")
             .metadata("language", "ukr")
             .metadata("handler_name", "Track 4"))
             .build(file.toFile())) {
@@ -39,7 +32,7 @@ public class MetadataTest extends VelvetVideoTest {
     public void testMuxerMetadata() throws IOException {
         Path file = dir.resolve("muxer-metadata.mp4");
         System.err.println(file);
-        try (IMuxer muxer = lib.muxer("mp4").video(lib.encoder("mpeg4"))
+        try (IMuxer muxer = lib.muxer("mp4").video(lib.videoEncoder("mpeg4"))
                 .metadata("title", "somemp4video")
                 .metadata("genre", "drama")
             .build(file.toFile())) {
@@ -94,11 +87,11 @@ public class MetadataTest extends VelvetVideoTest {
     	int FRAMES = 5;
         Path file = dir.resolve("stream-metadata-" + codec + "." + format);
         System.err.println("Writing " + file);
-        try (IMuxer muxer = lib.muxer(format).video(lib.encoder(codec)
+        try (IMuxer muxer = lib.muxer(format).video(lib.videoEncoder(codec)
         		.framerate(25)
         		.dimensions(640, 480))
         	.build(file.toFile())) {
-            IEncoder encoder = muxer.video(0);
+            IEncoderVideoStream encoder = muxer.video(0);
             for (int i=0; i<FRAMES; i++) {
             	encoder.encode(colorImage(i));
             }

@@ -10,13 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
-import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
-import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
-import com.zakgof.velvetvideo.IVideoLib.IFrame;
-import com.zakgof.velvetvideo.IVideoLib.IMuxer;
-import com.zakgof.velvetvideo.IVideoLib.IVideoStreamProperties;
-
 public class RawTest extends VelvetVideoTest {
 
 	private static final int FRAMES = 10;

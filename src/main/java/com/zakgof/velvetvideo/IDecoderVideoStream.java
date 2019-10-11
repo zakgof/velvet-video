@@ -1,0 +1,19 @@
+package com.zakgof.velvetvideo;
+
+import java.util.Map;
+
+public interface IDecoderVideoStream {
+    String name();
+
+    IFrame nextFrame();
+
+    Map<String, String> metadata();
+    IVideoStreamProperties properties();
+
+    IDecoderVideoStream seek(long frameNumber);
+    IDecoderVideoStream seekNano(long ns);
+
+	byte[] nextRawPacket();
+
+	int index();
+}

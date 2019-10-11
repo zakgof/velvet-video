@@ -14,13 +14,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
-import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
-import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
-import com.zakgof.velvetvideo.IVideoLib.IMuxer;
+import com.zakgof.velvetvideo.impl.VelvetVideoLib;
 
 public class VelvetVideoTest {
 
-	protected IVideoLib lib = new FFMpegVideoLib();
+	protected IVelvetVideoLib lib = new VelvetVideoLib();
 	protected static Path dir;
 
 	@BeforeAll
@@ -89,7 +87,7 @@ public class VelvetVideoTest {
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
 		try (IMuxer muxer = lib.muxer(format)
-				.video(lib.encoder(codec)
+				.video(lib.videoEncoder(codec)
 					.bitrate(3000000)
 					.dimensions(640, 480)
 					.framerate(25)
@@ -107,7 +105,7 @@ public class VelvetVideoTest {
 	protected BufferedImage[] createVariableFrameDurationVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
 		try (IMuxer muxer = lib.muxer(format)
-				.video(lib.encoder(codec)
+				.video(lib.videoEncoder(codec)
 					.bitrate(4000000)
 					.dimensions(640, 480)
 					.framerate(50)
@@ -126,10 +124,10 @@ public class VelvetVideoTest {
 		System.err.println(file);
 		BufferedImage[][] origs = { new BufferedImage[frames], new BufferedImage[frames] };
 		try (IMuxer muxer = lib.muxer(format)
-				.video(lib.encoder(codec)
+				.video(lib.videoEncoder(codec)
 			        .dimensions(640, 480)
 				    .framerate(30))
-				.video(lib.encoder(codec)
+				.video(lib.videoEncoder(codec)
 				     .dimensions(640, 480)
 				     .framerate(30))
 				.build(file)) {

@@ -10,11 +10,6 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
 
-import com.zakgof.velvetvideo.IVideoLib.Direction;
-import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
-import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
-import com.zakgof.velvetvideo.IVideoLib.IFrame;
-
 public class GenericEncodeDecodeTest extends VelvetVideoTest {
 
     private static final int FRAMES = 16;
