@@ -35,7 +35,7 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
             int i = 0;
 			for (IDecodedPacket packet : demuxer) {
 				Assertions.assertTrue(i < FRAMES);
-				IFrame frame = packet.video();
+				IVideoFrame frame = packet.video();
 				BufferedImage imgrestored = frame.image();
 				double diff = diff(orig[i], imgrestored);
 				System.err.println("Diff for frame " + i + " = " + diff);

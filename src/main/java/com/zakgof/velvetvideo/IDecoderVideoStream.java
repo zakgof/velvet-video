@@ -5,7 +5,7 @@ import java.util.Map;
 public interface IDecoderVideoStream {
     String name();
 
-    IFrame nextFrame();
+    IVideoFrame nextFrame();
 
     Map<String, String> metadata();
     IVideoStreamProperties properties();

@@ -100,7 +100,7 @@ public class MetadataTest extends VelvetVideoTest {
             IDecoderVideoStream videoStream = demuxer.videos().get(0);
 			IVideoStreamProperties restored = videoStream.properties();
 			for (int i=0; i<FRAMES; i++) {
-	            IFrame frame = videoStream.nextFrame();
+	            IVideoFrame frame = videoStream.nextFrame();
 	            Assertions.assertEquals(40000000L, frame.nanoduration());
 	            Assertions.assertEquals(i * 40000000L, frame.nanostamp());
 			}

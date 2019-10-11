@@ -1,7 +1,7 @@
 package com.zakgof.velvetvideo;
 
 public interface IDecodedPacket {
-	default IFrame video() {
+	default IVideoFrame video() {
 		return null;
 	}
 	default boolean isVideo() {

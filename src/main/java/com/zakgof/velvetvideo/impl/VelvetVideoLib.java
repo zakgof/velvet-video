@@ -28,7 +28,7 @@ import com.zakgof.velvetvideo.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IDemuxer;
 import com.zakgof.velvetvideo.IEncoderBuilder;
 import com.zakgof.velvetvideo.IEncoderVideoStream;
-import com.zakgof.velvetvideo.IFrame;
+import com.zakgof.velvetvideo.IVideoFrame;
 import com.zakgof.velvetvideo.IMuxer;
 import com.zakgof.velvetvideo.IMuxerBuilder;
 import com.zakgof.velvetvideo.IMuxerProperties;
@@ -662,7 +662,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
                 checkcode(libavcodec.avcodec_open2(codecCtx, codec, null));
             }
 
-            private IFrame frameOf(BufferedImage bi) {
+            private IVideoFrame frameOf(BufferedImage bi) {
                 long pts = frameHolder.frame.pts.get();
                 if (pts == AVNOPTS_VALUE) {
                 	pts = 0;
@@ -776,7 +776,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			}
 
 			@Override
-			public IFrame nextFrame() {
+			public IVideoFrame nextFrame() {
 				IDecodedPacket packet;
 				while((packet = nextPacket()) != null) {
 					if (packet.isVideo() && packet.video().stream() == this) {
@@ -853,7 +853,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 @Accessors(fluent = true)
 @Value
-class Frame implements IFrame {
+class Frame implements IVideoFrame {
     private final BufferedImage image;
     private final long nanostamp;
     private final long nanoduration;
@@ -894,10 +894,10 @@ class UnknownDecodedPacket implements IDecodedPacket {
 @Accessors(fluent = true)
 @RequiredArgsConstructor
 class DecodedVideoPacket implements IDecodedPacket {
-	private final IFrame frame;
+	private final IVideoFrame frame;
 
 	@Override
-	public IFrame video() {
+	public IVideoFrame video() {
 		return frame;
 	}
 

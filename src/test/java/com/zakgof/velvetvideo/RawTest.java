@@ -187,7 +187,7 @@ public class RawTest extends VelvetVideoTest {
 			try (IDemuxer demuxer = lib.demuxer(remuxed)) {
 				IDecoderVideoStream videoStream = demuxer.video(0);
 				for (int i=0; i<FRAMES; i++) {
-					IFrame frame = videoStream.nextFrame();
+					IVideoFrame frame = videoStream.nextFrame();
 					Assertions.assertEquals(1000000000L, frame.nanoduration());
 					BufferedImage remuxedImage = frame.image();
 					assertEqual(remuxedImage, rest1.get(i));
