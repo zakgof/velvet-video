@@ -36,6 +36,10 @@ repositories {
     jcenter()
 }
 
+test {
+    useJUnitPlatform()
+}
+
 task fatJar(type: Jar) {
     baseName = 'velvet-video'
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
