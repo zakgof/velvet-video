@@ -87,7 +87,7 @@ public class VelvetVideoTest {
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
 		try (IMuxer muxer = lib.muxer(format)
-				.video(lib.videoEncoder(codec)
+				.videoEncoder(lib.videoEncoder(codec)
 					.bitrate(3000000)
 					.dimensions(640, 480)
 					.framerate(25)
@@ -95,7 +95,7 @@ public class VelvetVideoTest {
 				.build(file)) {
 			for (int i = 0; i < orig.length; i++) {
 				BufferedImage image = colorImage(i);
-				muxer.video(0).encode(image);
+				muxer.videoEncoder(0).encode(image);
 				orig[i] = image;
 			}
 		}
@@ -105,7 +105,7 @@ public class VelvetVideoTest {
 	protected BufferedImage[] createVariableFrameDurationVideo(String codec, String format, File file, int frames) {
 		BufferedImage[] orig = new BufferedImage[frames];
 		try (IMuxer muxer = lib.muxer(format)
-				.video(lib.videoEncoder(codec)
+				.videoEncoder(lib.videoEncoder(codec)
 					.bitrate(4000000)
 					.dimensions(640, 480)
 					.framerate(50)
@@ -113,7 +113,7 @@ public class VelvetVideoTest {
 				.build(file)) {
 			for (int i = 0; i < orig.length; i++) {
 				BufferedImage image = colorImage(i);
-				muxer.video(0).encode(image, i);
+				muxer.videoEncoder(0).encode(image, i);
 				orig[i] = image;
 			}
 		}
@@ -124,10 +124,10 @@ public class VelvetVideoTest {
 		System.err.println(file);
 		BufferedImage[][] origs = { new BufferedImage[frames], new BufferedImage[frames] };
 		try (IMuxer muxer = lib.muxer(format)
-				.video(lib.videoEncoder(codec)
+				.videoEncoder(lib.videoEncoder(codec)
 			        .dimensions(640, 480)
 				    .framerate(30))
-				.video(lib.videoEncoder(codec)
+				.videoEncoder(lib.videoEncoder(codec)
 				     .dimensions(640, 480)
 				     .framerate(30))
 				.build(file)) {
@@ -135,8 +135,8 @@ public class VelvetVideoTest {
 			for (int i = 0; i < frames; i++) {
 				BufferedImage color = colorImage(i);
 				BufferedImage bw = bwImage(i);
-				muxer.video(0).encode(color);
-				muxer.video(1).encode(bw);
+				muxer.videoEncoder(0).encode(color);
+				muxer.videoEncoder(1).encode(bw);
 				origs[0][i] = color;
 				origs[1][i] = bw;
 			}

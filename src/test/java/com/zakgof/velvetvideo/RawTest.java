@@ -62,10 +62,10 @@ public class RawTest extends VelvetVideoTest {
 		// Remux raw stream to MP4
 		try (IDemuxer demuxer = lib.demuxer(file)) {
 			IDecoderVideoStream origStream = demuxer.video(0);
-			try (IMuxer muxer = lib.muxer(format).video(origStream).build(remuxed)) {
+			try (IMuxer muxer = lib.muxer(format).videoRemuxer(origStream).build(remuxed)) {
 				byte[] rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
-					muxer.video(0).writeRaw(rawPacket);
+					muxer.videoRemuxer(0).writeRaw(rawPacket);
 				}
 			}
 		}
@@ -93,14 +93,14 @@ public class RawTest extends VelvetVideoTest {
 		// Remux raw streams
 		int TIMES = 4;
 		try (IMuxer muxer = lib.muxer("mp4")
-		    .video(lib.demuxer(file).video(0))
+		    .videoRemuxer(lib.demuxer(file).video(0))
 		    .build(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
 				try (IDemuxer demuxer = lib.demuxer(file)) {
 					IDecoderVideoStream origStream = demuxer.videos().get(0);
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
-						muxer.video(0).writeRaw(rawPacket);
+						muxer.videoRemuxer(0).writeRaw(rawPacket);
 					}
 				}
 			}
@@ -175,10 +175,10 @@ public class RawTest extends VelvetVideoTest {
 			// Remux raw stream to MP4
 			try (IDemuxer demuxer = lib.demuxer(file)) {
 				IDecoderVideoStream origStream = demuxer.video(0);
-				try (IMuxer muxer = lib.muxer(format).video(lib.encoder(origStream).framerate(1)).build(remuxed)) {
+				try (IMuxer muxer = lib.muxer(format).videoRemuxer(lib.videoRemux(origStream).framerate(1)).build(remuxed)) {
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
-						muxer.video(0).writeRaw(rawPacket);
+						muxer.videoRemuxer(0).writeRaw(rawPacket);
 					}
 				}
 			}

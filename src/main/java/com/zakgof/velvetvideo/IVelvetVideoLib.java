@@ -11,9 +11,9 @@ public interface IVelvetVideoLib {
 
     List<String> codecs(Direction dir);
 
-    IEncoderBuilder videoEncoder(String format);
+    IVideoEncoderBuilder videoEncoder(String format);
 
-    IEncoderBuilder encoder(IDecoderVideoStream decoder);
+    IVideoRemuxerBuilder videoRemux(IDecoderVideoStream decoder);
 
     IMuxerBuilder muxer(String format);
 

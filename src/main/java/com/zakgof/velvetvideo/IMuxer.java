@@ -5,5 +5,7 @@ public interface IMuxer extends AutoCloseable {
 	@Override
 	void close();
 
-	IEncoderVideoStream video(int index);
+	IEncoderVideoStream videoEncoder(int index);
+
+	IRemuxerVideoStream videoRemuxer(int index);
 }

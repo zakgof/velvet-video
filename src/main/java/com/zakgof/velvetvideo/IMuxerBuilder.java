@@ -4,12 +4,15 @@ import java.io.File;
 
 public interface IMuxerBuilder {
 
-    IMuxerBuilder video(IEncoderBuilder encoderBuilder);
-    IMuxerBuilder video(IDecoderVideoStream decoder);
+	IMuxerBuilder videoEncoder(IVideoEncoderBuilder encoderBuilder);
 
-    IMuxerBuilder metadata(String key, String value);
+	IMuxerBuilder videoRemuxer(IVideoRemuxerBuilder decoder);
 
-    IMuxer build(File outputFile);
+	IMuxerBuilder videoRemuxer(IDecoderVideoStream decoder);
 
-    IMuxer build(ISeekableOutput output);
+	IMuxerBuilder metadata(String key, String value);
+
+	IMuxer build(File outputFile);
+
+	IMuxer build(ISeekableOutput output);
 }
