@@ -40,6 +40,8 @@ public interface IVideoLib {
             IBuilder metadata(String key, String value);
 
             IBuilder enableExperimental();
+            
+            IBuilder filter(String filter);
 
         }
 

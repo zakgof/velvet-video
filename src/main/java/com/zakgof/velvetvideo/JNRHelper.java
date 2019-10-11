@@ -22,9 +22,10 @@ import jnr.ffi.Platform;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
+import jnr.ffi.byref.PointerByReference;
 import jnr.ffi.provider.ParameterFlags;
 
-class JNRHelper {
+public class JNRHelper {
 
 	private static String MIN_NATIVE_VERSION = "0.2.0";
 
@@ -41,15 +42,16 @@ class JNRHelper {
     	try {
 	    	URLConnection connection = resource.openConnection();
 	    	connection.connect();
-	    	InputStream is = connection.getInputStream();
-        	Properties props = new Properties();
-        	props.load(is);
-        	String version = props.getProperty("Version");
-        	LOG.info("Loading velvet-video-natives version " + version);
-        	if (version.compareTo(MIN_NATIVE_VERSION) < 0) {
-        		throw new VelvetVideoException("Minimum compatible version of velvet-video-natives is " + MIN_NATIVE_VERSION + ", detected version " + version);
-        	}
-        	return createExtractionDirectory(version);
+	    	try (InputStream is = connection.getInputStream()) {
+	        	Properties props = new Properties();
+	        	props.load(is);
+	        	String version = props.getProperty("Version");
+	        	LOG.info("Loading velvet-video-natives version " + version);
+	        	if (version.compareTo(MIN_NATIVE_VERSION) < 0) {
+	        		throw new VelvetVideoException("Minimum compatible version of velvet-video-natives is " + MIN_NATIVE_VERSION + ", detected version " + version);
+	        	}
+	        	return createExtractionDirectory(version);
+	    	}
         } catch (IOException e) {
 			throw new VelvetVideoException("Error while loading native version manifest", e);
 		}
@@ -64,7 +66,7 @@ class JNRHelper {
 		return dir;
 	}
 
-	static <L> L load(Class<L> clazz, String libName) {
+	public static <L> L load(Class<L> clazz, String libName) {
 
         try {
 
@@ -140,8 +142,14 @@ class JNRHelper {
             throw new VelvetVideoException(e);
         }
     }
+    
+	public static <T extends Struct> T struct(Class<T> clazz, PointerByReference pp) {
+		return struct(clazz, pp.getValue());
+	}
 
     public static Pointer ptr(Struct.NumberField member) {
         return member.getMemory().slice(member.offset());
     }
+
+
 }

@@ -8,8 +8,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.imageio.ImageIO;
-
 import org.junit.jupiter.api.Assertions;
 
 import com.zakgof.velvetvideo.IVideoLib.Direction;
@@ -44,13 +42,6 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 				Assertions.assertTrue(i < FRAMES);
 				IFrame frame = packet.video();
 				BufferedImage imgrestored = frame.image();
-				try {
-					// TODO
-					ImageIO.write(orig[i], "png", new File("c:\\pr\\orig-" + i + ".png"));
-					ImageIO.write(imgrestored, "png", new File("c:\\pr\\rest-" + i + ".png"));
-				} catch (IOException e) {
-					Assertions.fail(e);
-				}
 				double diff = diff(orig[i], imgrestored);
 				System.err.println("Diff for frame " + i + " = " + diff);
 				Assertions.assertEquals(0, diff, 20.0, "Frame " + i + " differs by " + diff);
