@@ -53,6 +53,7 @@ import com.zakgof.velvetvideo.impl.jnr.LibAVCodec;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFormat;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFormat.ICustomAvioCallback;
 import com.zakgof.velvetvideo.impl.jnr.LibAVUtil;
+import com.zakgof.velvetvideo.impl.middle.Feeder;
 import com.zakgof.velvetvideo.impl.middle.Filters;
 import com.zakgof.velvetvideo.impl.middle.FrameHolder;
 
@@ -219,8 +220,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
         private FrameHolder frameHolder;
 		private boolean codecOpened;
-		private Filters filters;
 		private final String filterString;
+		private Filters filters;
 
         public EncoderVideoStreamImpl(VideoEncoderBuilderImpl builder, AVFormatContext formatCtx, Consumer<AVPacket> output) {
         	super(output);
@@ -278,7 +279,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
                 checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), codecOpts));
                 codecOpened = true;
                 if (filterString != null)
-                	this.filters = new Filters(VelvetVideoLib.this, codecCtx, filterString);
+                	this.filters = new Filters(codecCtx, filterString);
             } else {
             	if (codecCtx.width.get() != width || codecCtx.height.get() != height) {
             		throw new VelvetVideoException("Image dimensions do not match, expected " + codecCtx.width.get() + "x" + codecCtx.height.get());
@@ -300,7 +301,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			if (filters == null) {
 				encodeFrame(frame, duration);
 			} else {
-				filters.submitFrame(frame, frameHolder.frame, filteredFrame -> encodeFrame(filteredFrame, duration));
+				Feeder.feed(frame,
+					inputFrame -> filters.submitFrame(inputFrame, frameHolder.frame),
+					outputFrame -> encodeFrame(outputFrame, duration));
 			}
 		}
 
@@ -334,20 +337,18 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
         @Override
 		public void flush() {
-
         	submitFrame(null, defaultFrameDuration);
-
         }
-
-
 
 		@Override
 		public void close() {
 			super.close();
-
 			libavcodec.avcodec_close(codecCtx);
 			libavcodec.avcodec_free_context(new Pointer[] { Struct.getMemory(codecCtx) });
+		}
 
+		public void setFilter(String filterString) {
+			this.filters = new Filters(codecCtx, filterString);
 		}
 
     }
@@ -529,7 +530,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         private final List<DecoderVideoStreamImpl> streams = new ArrayList<>();
         private final AVPacket packet;
         private final Map<Integer, DecoderVideoStreamImpl> indexToVideoStream = new LinkedHashMap<>();
-        private Flusher flusher;
+		private int flushStreamIndex = 0;
 
         public DemuxerImpl(FileInputStream input) {
             this.input = new FileSeekableInput(input);
@@ -593,34 +594,27 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
         @Override
 		public IDecodedPacket nextPacket() {
+        	return Feeder.next(this::nextRawPacket, this::decodePacket);
+        }
+
+        private AVPacket nextRawPacket() {
 			libavcodec.av_init_packet(packet);
 			packet.data.set((Pointer) null);
 			packet.size.set(0);
-
-			for (;;) {
-				int res = libavformat.av_read_frame(formatCtx, packet);
-				if (res == AVERROR_EAGAIN)
-					continue;
-
-				if (res == AVERROR_EOF || res == -1) {
-					if (flusher == null) {
-						flusher = new Flusher();
-					}
-					return flusher.flush();
-				}
-				checkcode(res);
-
+			int res = libavformat.av_read_frame(formatCtx, packet);
+			if (res == AVERROR_EOF || res == -1) {
 				logDemuxer.atDebug()
-					.addArgument(packet.stream_index.get())
-					.addArgument(packet.pts.get())
-					.addArgument(packet.dts.get())
-				.log(() -> "read packet stream: {} PTS/DTS={}/{}");
-				IDecodedPacket decodedPacket = decodePacket(packet);
-				if (decodedPacket != null) {
-					return decodedPacket;
-				}
+					.log(() -> "muxer empty");
+				return null;
 			}
-		}
+			checkcode(res);
+			logDemuxer.atDebug()
+				.addArgument(packet.stream_index.get())
+				.addArgument(packet.pts.get())
+				.addArgument(packet.dts.get())
+				.log(() -> "read packet stream={} PTS/DTS={}/{}");
+			return packet;
+        }
 
         @Override
         public Stream<IDecodedPacket> stream() {
@@ -651,33 +645,36 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
         /**
-         * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
-         */
-        private IDecodedPacket decodePacket(AVPacket p) {
-            int index = p.stream_index.get();
-            DecoderVideoStreamImpl stream = indexToVideoStream.get(index);
-            if (stream != null)
-                return stream.decodePacket(p);
-            logDemuxer.atWarn().addArgument(index).log("received packet of unknown stream {}");
-            return new UnknownDecodedPacket(packet.bytes());
-        }
+		 * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
+		 */
+		private IDecodedPacket decodePacket(AVPacket p) {
+			if (p != null) {
+				return decodeRawPacket(p);
+			} else {
+				return flushNextStream();
+			}
+		}
 
-        private class Flusher {
+		private IDecodedPacket decodeRawPacket(AVPacket p) {
+			int index = p.stream_index.get();
+			DecoderVideoStreamImpl stream = indexToVideoStream.get(index);
+			if (stream != null)
+				return stream.decodePacket(p);
+			logDemuxer.atWarn().addArgument(index).log("received packet of unknown stream {}");
+			return new UnknownDecodedPacket(packet.bytes());
+		}
 
-            private int streamIndex = 0;
-
-            public IDecodedPacket flush() {
-                for (;streamIndex<streams.size(); streamIndex++) {
-                	logDemuxer.atDebug().addArgument(streamIndex).log(() -> "flushing demuxer stream={}");
-                	DecoderVideoStreamImpl stream = streams.get(streamIndex);
-                	IDecodedPacket packet = stream.decodePacket(null);
-                    if (packet != null) {
-                    	return packet;
-                    }
-                }
-                return null;
-            }
-        }
+		private IDecodedPacket flushNextStream() {
+			for (; flushStreamIndex < streams.size(); flushStreamIndex++) {
+				logDemuxer.atDebug().addArgument(flushStreamIndex).log(() -> "flushing demuxer stream={}");
+				DecoderVideoStreamImpl stream = streams.get(flushStreamIndex);
+				IDecodedPacket packet = stream.decodePacket(null);
+				if (packet != null) {
+					return packet;
+				}
+			}
+			return null;
+		}
 
         class DecoderVideoStreamImpl implements IDecoderVideoStream {
 
@@ -690,6 +687,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             private FrameHolder frameHolder;
             private final int index;
             private long skipToPts = -1;
+			private Filters filters;
 
             public DecoderVideoStreamImpl(AVStream avstream, String name) {
                 this.avstream = avstream;
@@ -715,47 +713,52 @@ public class VelvetVideoLib implements IVelvetVideoLib {
              * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
              */
             IDecodedPacket decodePacket(AVPacket pack) {
-                int res = libavcodec.avcodec_send_packet(codecCtx, pack);
-                if (res != AVERROR_EOF && pack == null) {
-                	// When flushing, ignore EOF until receive_frame is full flushed
-                	checkcode(res);
-                }
+            	for (;;) {
+	            	AVFrame frame = feedPacket(pack);
+	            	if (filters != null) {
+	           			frame = filters.submitFrame(frame, frameHolder.frame);
+	            	}
+	            	if (frame == null)
+	            		return null;
+	            	long pts = frameHolder.frame.pts.get();
+	                logDecoder.atDebug().addArgument(pts).log("delivered frame pts={}");
+	                if (skipToPts != -1) {
+	                	if (pts == AVNOPTS_VALUE) {
+	                		throw new VelvetVideoException("Cannot seek when decoded packets have no PTS. Looks like neighter codec no container keep timing information.");
+	                	}
+	                    if (pts < skipToPts) {
+							logDecoder.atDebug().addArgument(() -> skipToPts)
+									.log(" ...but need to skip more to pts={}");
+							if (pack == null)
+								continue;
+							return null;
+						} else if (pts > skipToPts) {
+							logDecoder.atWarn().addArgument(pts).addArgument(skipToPts)
+									.log(" ...unexpected position: PTS={} missed target PTS={}");
+							if (pack == null)
+								continue;
+							return null;
+	                    }
+	                    skipToPts = -1;
+	                }
+	                return new DecodedVideoPacket(frameOf(frameHolder.getPixels()));
+            	}
+            }
 
-                if (frameHolder == null) {
-                    this.frameHolder = new FrameHolder(codecCtx.width.get(), codecCtx.height.get(), codecCtx.pix_fmt.get(), AVPixelFormat.AV_PIX_FMT_BGR24, false);
-                }
-                for(;;) {
-	                res = libavcodec.avcodec_receive_frame(codecCtx, frameHolder.frame);
-	                if (res >=0) {
-	                    long pts = frameHolder.frame.pts.get();
-	                    logDecoder.atDebug().addArgument(pts).log("decoded frame pts={}");
-	                    if (skipToPts != -1) {
-	                    	if (pts == AVNOPTS_VALUE) {
-	                    		throw new VelvetVideoException("Cannot seek when decoded packets have no PTS. Looks like neighter codec no container keep timing information.");
-	                    	}
-	                        if (pts < skipToPts) {
-	                        	logDecoder.atDebug().addArgument(() -> skipToPts).log(" ...but need to skip more to pts={}");
-	                            res = -11;
-	                        } else if (pts > skipToPts) {
-	                        	logDecoder.atWarn().addArgument(pts).addArgument(skipToPts).log(" ...unexpected position: PTS={} missed target PTS={}");
-	                            // res = -11;
-	                        }
-	                    }
-	                    if (res >= 0) {
-	                        skipToPts = -1;
-	                        return new DecodedVideoPacket(frameOf(frameHolder.getPixels()));
-	                    }
-	                } else {
-	                	logDecoder.atDebug().addArgument(res).log("decoder: res={}");
-	                }
-	                if (pack == null && res == AVERROR_EAGAIN) {
-	                	continue;
-	                }
-	                if (res == AVERROR_EOF || pack != null && res == AVERROR_EAGAIN) {
-	                	return null;
-	                }
-	                checkcode(res);
-                }
+            AVFrame feedPacket(AVPacket pack) {
+            	 int res1 = libavcodec.avcodec_send_packet(codecCtx, pack);
+            	 if (res1 != AVERROR_EOF) {
+            		 checkcode(res1);
+            	 }
+            	 if (frameHolder == null) {
+            		 this.frameHolder = new FrameHolder(codecCtx.width.get(), codecCtx.height.get(), codecCtx.pix_fmt.get(), AVPixelFormat.AV_PIX_FMT_BGR24, false);
+            	 }
+            	 int res = libavcodec.avcodec_receive_frame(codecCtx, frameHolder.frame);
+            	 if (res == AVERROR_EOF || pack != null && res == AVERROR_EAGAIN)
+            		 return null;
+            	 checkcode(res);
+            	 logDecoder.atDebug().addArgument(frameHolder.frame.pts.get()).log("decoded frame pts={}");
+            	 return frameHolder.frame;
             }
 
             @Override
@@ -809,7 +812,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 				checkcode(libavformat.av_seek_frame(formatCtx, this.index, pts, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD));
                 libavcodec.avcodec_flush_buffers(codecCtx);
                 this.skipToPts  = pts;
-                flusher = null;
+                flushStreamIndex = 0;
+                if (filters != null)
+                	filters.reset();
                 return this;
 			}
 
@@ -826,30 +831,20 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             @Override
             public byte[] nextRawPacket() {
-            	 libavcodec.av_init_packet(packet);
-                 packet.data.set((Pointer) null);
-                 packet.size.set(0);
-
-                 int res;
-                 do {
-                     res = libavformat.av_read_frame(formatCtx, packet);
-                     logDemuxer.atDebug()
-                        .addArgument(() -> packet.stream_index.get())
-                        .addArgument(() -> packet.pts.get())
-                        .addArgument(() -> packet.dts.get())
-                        .log("read packet stream={}  PTS/DTS={}/{}");
-                     if (res == AVERROR_EOF || res == -1) {
-//                         if (flusher == null) {
-//                             flusher = new Flusher();
-//                         }
-//                         res = flusher.flush(videoConsumer, audioConsumer);
-                    	 // TODO !
-                    	 return null;
-                     } else {
-                    	 return packet.bytes();
-                     }
-                 } while (res == AVERROR_EAGAIN);
+            	 AVPacket p;
+            	 while ((p = DemuxerImpl.this.nextRawPacket()) != null) {
+            		 if (p.stream_index.get() == index) {
+            			 return p.bytes();
+            		 }
+            	 }
+            	 return null;
             }
+
+			@Override
+			public void setFilter(String filterString) {
+				if (filterString != null)
+					this.filters = new Filters(codecCtx, filterString);
+			}
 
         }
 
@@ -859,7 +854,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
         @Override
-        public IDecoderVideoStream video(int index) {
+        public IDecoderVideoStream videoStream(int index) {
         	return streams.get(index);
         }
 

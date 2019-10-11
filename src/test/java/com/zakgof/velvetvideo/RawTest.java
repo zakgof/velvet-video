@@ -61,7 +61,7 @@ public class RawTest extends VelvetVideoTest {
 
 		// Remux raw stream to MP4
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			IDecoderVideoStream origStream = demuxer.video(0);
+			IDecoderVideoStream origStream = demuxer.videoStream(0);
 			try (IMuxer muxer = lib.muxer(format).videoRemuxer(origStream).build(remuxed)) {
 				byte[] rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
@@ -93,7 +93,7 @@ public class RawTest extends VelvetVideoTest {
 		// Remux raw streams
 		int TIMES = 4;
 		try (IMuxer muxer = lib.muxer("mp4")
-		    .videoRemuxer(lib.demuxer(file).video(0))
+		    .videoRemuxer(lib.demuxer(file).videoStream(0))
 		    .build(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
 				try (IDemuxer demuxer = lib.demuxer(file)) {
@@ -115,8 +115,8 @@ public class RawTest extends VelvetVideoTest {
 					assertEqual(remuxedImage, original.get(i));
 				}
 			}
-			IVideoStreamProperties mergedStreamProperties = demuxer.video(0).properties();
-			IVideoStreamProperties originalStreamProperties = lib.demuxer(file).video(0).properties();
+			IVideoStreamProperties mergedStreamProperties = demuxer.videoStream(0).properties();
+			IVideoStreamProperties originalStreamProperties = lib.demuxer(file).videoStream(0).properties();
 			Assertions.assertEquals(originalStreamProperties.width(), mergedStreamProperties.width());
 			Assertions.assertEquals(originalStreamProperties.height(), mergedStreamProperties.height());
 
@@ -174,7 +174,7 @@ public class RawTest extends VelvetVideoTest {
 
 			// Remux raw stream to MP4
 			try (IDemuxer demuxer = lib.demuxer(file)) {
-				IDecoderVideoStream origStream = demuxer.video(0);
+				IDecoderVideoStream origStream = demuxer.videoStream(0);
 				try (IMuxer muxer = lib.muxer(format).videoRemuxer(lib.videoRemux(origStream).framerate(1)).build(remuxed)) {
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
@@ -185,7 +185,7 @@ public class RawTest extends VelvetVideoTest {
 
 			// Read and check MP4 frames
 			try (IDemuxer demuxer = lib.demuxer(remuxed)) {
-				IDecoderVideoStream videoStream = demuxer.video(0);
+				IDecoderVideoStream videoStream = demuxer.videoStream(0);
 				for (int i=0; i<FRAMES; i++) {
 					IVideoFrame frame = videoStream.nextFrame();
 					Assertions.assertEquals(1000000000L, frame.nanoduration());

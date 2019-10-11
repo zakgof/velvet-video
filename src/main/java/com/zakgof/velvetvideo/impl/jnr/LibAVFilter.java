@@ -26,9 +26,11 @@ public interface LibAVFilter {
 
 	void avfilter_free(AVFilterContext filter);
 
-	void avfilter_graph_free(Pointer ppgraph);
+	void avfilter_graph_free(Pointer[] ppgraph);
 
 	AVFilterInOut avfilter_inout_alloc();
+
+	void avfilter_inout_free(Pointer[] pp);
 
 	int avfilter_graph_create_filter(PointerByReference /* AVFilterContext */ filt_ctx, @In AVFilter filt, String name,
 			String args, Pointer opaque, AVFilterGraph graph_ctx);

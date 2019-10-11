@@ -6,19 +6,22 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 public interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket> {
-    @Override
+	@Override
 	void close();
-    List<? extends IDecoderVideoStream> videos();
 
-    IDecodedPacket nextPacket();
+	List<? extends IDecoderVideoStream> videos();
 
-    Map<String, String> metadata();
-    IMuxerProperties properties();
+	IDecodedPacket nextPacket();
 
-    Stream<IDecodedPacket> stream();
+	Map<String, String> metadata();
 
-    @Override
-    Iterator<IDecodedPacket> iterator();
+	IMuxerProperties properties();
 
-	IDecoderVideoStream video(int index);
+	Stream<IDecodedPacket> stream();
+
+	@Override
+	Iterator<IDecodedPacket> iterator();
+
+	IDecoderVideoStream videoStream(int index);
+
 }

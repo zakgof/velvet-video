@@ -78,10 +78,14 @@ public class VelvetVideoTest {
 	}
 
 	protected void assertEqual(BufferedImage im1, BufferedImage im2) {
+		assertEqual(im1, im2, 1.0);
+	}
+
+	protected void assertEqual(BufferedImage im1, BufferedImage im2, double tolerance) {
 		Assertions.assertEquals(im1.getWidth(), im2.getWidth());
 		Assertions.assertEquals(im1.getHeight(), im2.getHeight());
 		double diff = diff(im1, im2);
-		Assertions.assertEquals(0, diff, 1.0);
+		Assertions.assertEquals(0, diff, tolerance);
 	}
 
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
@@ -145,8 +149,13 @@ public class VelvetVideoTest {
 	}
 
 	protected List<BufferedImage> loadFrames(File file, int frames) {
+		return loadFrames(file, frames, null);
+	}
+
+	protected List<BufferedImage> loadFrames(File file, int frames, String filter) {
 		List<BufferedImage> restored = new ArrayList<>(frames);
 		try (IDemuxer demuxer = lib.demuxer(file)) {
+			demuxer.videoStream(0).setFilter(filter);
 			for (IDecodedPacket packet : demuxer) {
 				restored.add(packet.video().image());
 			}

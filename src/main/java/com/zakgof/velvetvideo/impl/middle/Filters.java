@@ -1,38 +1,41 @@
 package com.zakgof.velvetvideo.impl.middle;
 
-import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.zakgof.velvetvideo.impl.VelvetVideoLib;
 import com.zakgof.velvetvideo.impl.JNRHelper;
+import com.zakgof.velvetvideo.impl.VelvetVideoLib;
 import com.zakgof.velvetvideo.impl.jnr.AVCodecContext;
 import com.zakgof.velvetvideo.impl.jnr.AVFrame;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFilter;
-import com.zakgof.velvetvideo.impl.jnr.LibAVUtil;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFilter.AVFilter;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFilter.AVFilterContext;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFilter.AVFilterGraph;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFilter.AVFilterInOut;
+import com.zakgof.velvetvideo.impl.jnr.LibAVUtil;
 
 import jnr.ffi.Pointer;
 import jnr.ffi.Struct;
 import jnr.ffi.byref.PointerByReference;
 import jnr.ffi.provider.jffi.NativeRuntime;
 
-public class Filters {
+public class Filters implements AutoCloseable {
 
 		private final static LibAVFilter libavfilter = JNRHelper.load(LibAVFilter.class, "avfilter-7");
 		private static final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil-56");
-		
-		private AVFilterContext buffersrc_ctx;
-		private AVFilterContext buffersink_ctx;
-		private Pointer pixfmts;
-		private AVFilterInOut outputs;
-		private AVFilterInOut inputs;
-		private AVFilter buffersrc;
-		private AVFilter buffersink;
-		private AVFilterGraph graph;
-		
-		public Filters(VelvetVideoLib ffMpegVideoLib, AVCodecContext codecCtx, String filterString) {
+
+		private final Logger logFilter = LoggerFactory.getLogger("velvet-video.filter");
+
+		private final AVFilterContext buffersrc_ctx;
+		private final AVFilterContext buffersink_ctx;
+		private final Pointer pixfmts;
+		private final AVFilterInOut outputs;
+		private final AVFilterInOut inputs;
+		private final AVFilter buffersrc;
+		private final AVFilter buffersink;
+		private final AVFilterGraph graph;
+
+		public Filters(AVCodecContext codecCtx, String filterString) {
 
 			graph = libavfilter.avfilter_graph_alloc();
 
@@ -43,10 +46,10 @@ public class Filters {
 
 			PointerByReference ppbuffersink_ctx = new PointerByReference();
 			PointerByReference ppbuffersrc_ctx = new PointerByReference();
-			
+
 			String inArgs = String.format("width=%d:height=%d:pix_fmt=%d:time_base=%d/%d", codecCtx.width.get(), codecCtx.height.get(),
 					codecCtx.pix_fmt.intValue(), codecCtx.time_base.num.get(), codecCtx.time_base.den.get());
-			
+
 			pixfmts = NativeRuntime.getInstance().getMemoryManager().allocateDirect(4 * 2);
 			pixfmts.putInt(0, -1);
 			pixfmts.putInt(4, -1);
@@ -54,10 +57,10 @@ public class Filters {
 			libavutil.checkcode(libavfilter.avfilter_graph_create_filter(ppbuffersrc_ctx, buffersrc, "in", inArgs, null, graph));
 			libavutil.checkcode(libavfilter.avfilter_graph_create_filter(ppbuffersink_ctx, buffersink, "out", null, pixfmts, graph));
 
-			
+
 			buffersrc_ctx = JNRHelper.struct(AVFilterContext.class, ppbuffersrc_ctx);
 			buffersink_ctx = JNRHelper.struct(AVFilterContext.class, ppbuffersink_ctx);
-			
+
 
 		    outputs.name.set(libavutil.av_strdup("in"));
 		    outputs.filter_ctx.set(buffersrc_ctx);
@@ -67,10 +70,10 @@ public class Filters {
 		    inputs.filter_ctx.set(buffersink_ctx);
 		    inputs.pad_idx.set(0);
 		    inputs.next.set((Pointer)null);
-//			
+//
 			PointerByReference ins = new PointerByReference(Struct.getMemory(inputs));
 			PointerByReference outs = new PointerByReference(Struct.getMemory(outputs));
-			
+
 			libavutil.checkcode(libavfilter.avfilter_graph_parse_ptr(graph,
 					filterString,
 					ins, outs, null));
@@ -78,18 +81,30 @@ public class Filters {
 			libavutil.checkcode(libavfilter.avfilter_graph_config(graph, null));
 		}
 
-		public void submitFrame(AVFrame inputframe, AVFrame allocframe, Consumer<AVFrame> output) {
+		public AVFrame submitFrame(AVFrame inputframe, AVFrame allocframe) {
+			logFilter.atDebug().log(inputframe == null ? "filter flush" : "frame send to filter PTS=" + inputframe.pts.get());
 			libavutil.checkcode(libavfilter.av_buffersrc_write_frame(buffersrc_ctx, inputframe));
-			int res;
-			while ((res = libavfilter.av_buffersink_get_frame(buffersink_ctx, allocframe)) >= 0) {
-				output.accept(allocframe);
-			}
-			if (res == VelvetVideoLib.AVERROR_EAGAIN) {
-				return;
-			}
-			if (res == VelvetVideoLib.AVERROR_EOF) {
-				output.accept(null);
+			int res = libavfilter.av_buffersink_get_frame(buffersink_ctx, allocframe);
+			if (res == VelvetVideoLib.AVERROR_EAGAIN || res == VelvetVideoLib.AVERROR_EOF) {
+				if (inputframe == null)
+					logFilter.atDebug().log("filter buffers empty");
+				return null;
 			}
 			libavutil.checkcode(res);
+			logFilter.atDebug().addArgument(allocframe.pts.get()).log("filter returned frame PTS={}");
+
+			return allocframe;
+		}
+
+		public void reset() {
+			// TODO Auto-generated method stub
+
+		}
+
+		@Override
+		public void close() {
+			libavfilter.avfilter_inout_free(new Pointer[] {Struct.getMemory(inputs)});
+			libavfilter.avfilter_inout_free(new Pointer[] {Struct.getMemory(outputs)});
+			libavfilter.avfilter_graph_free(new Pointer[] {Struct.getMemory(graph)});
 		}
 	}

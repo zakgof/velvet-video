@@ -3,17 +3,22 @@ package com.zakgof.velvetvideo;
 import java.util.Map;
 
 public interface IDecoderVideoStream {
-    String name();
+	String name();
 
-    IVideoFrame nextFrame();
+	IVideoFrame nextFrame();
 
-    Map<String, String> metadata();
-    IVideoStreamProperties properties();
+	Map<String, String> metadata();
 
-    IDecoderVideoStream seek(long frameNumber);
-    IDecoderVideoStream seekNano(long ns);
+	IVideoStreamProperties properties();
+
+	IDecoderVideoStream seek(long frameNumber);
+
+	IDecoderVideoStream seekNano(long ns);
 
 	byte[] nextRawPacket();
 
 	int index();
+
+	// TODO: mutator does not look good here
+	void setFilter(String filterString);
 }
