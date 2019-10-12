@@ -34,6 +34,7 @@ public class Filters implements AutoCloseable {
 		private final AVFilter buffersrc;
 		private final AVFilter buffersink;
 		private final AVFilterGraph graph;
+		private AVFrame workframe;
 
 		public Filters(AVCodecContext codecCtx, String filterString) {
 
@@ -50,9 +51,9 @@ public class Filters implements AutoCloseable {
 			String inArgs = String.format("width=%d:height=%d:pix_fmt=%d:time_base=%d/%d", codecCtx.width.get(), codecCtx.height.get(),
 					codecCtx.pix_fmt.intValue(), codecCtx.time_base.num.get(), codecCtx.time_base.den.get());
 
-			pixfmts = NativeRuntime.getInstance().getMemoryManager().allocateDirect(4 * 2);
+			// TODO?
+			pixfmts = NativeRuntime.getInstance().getMemoryManager().allocateDirect(4);
 			pixfmts.putInt(0, -1);
-			pixfmts.putInt(4, -1);
 
 			libavutil.checkcode(libavfilter.avfilter_graph_create_filter(ppbuffersrc_ctx, buffersrc, "in", inArgs, null, graph));
 			libavutil.checkcode(libavfilter.avfilter_graph_create_filter(ppbuffersink_ctx, buffersink, "out", null, pixfmts, graph));
@@ -79,26 +80,38 @@ public class Filters implements AutoCloseable {
 					ins, outs, null));
 
 			libavutil.checkcode(libavfilter.avfilter_graph_config(graph, null));
+
+
 		}
 
-		public AVFrame submitFrame(AVFrame inputframe, AVFrame allocframe) {
+		public AVFrame submitFrame(AVFrame inputframe) {
+
+			if (workframe == null) {
+				workframe = libavutil.av_frame_alloc();
+				workframe.width.set(inputframe.width.get());
+				workframe.height.set(inputframe.height.get());
+				workframe.pix_fmt.set(inputframe.pix_fmt.get());
+				workframe.pts.set(inputframe.pts.get());
+		        libavutil.checkcode(libavutil.av_frame_get_buffer(workframe, 0));
+			}
+
 			logFilter.atDebug().log(inputframe == null ? "filter flush" : "frame send to filter PTS=" + inputframe.pts.get());
 			libavutil.checkcode(libavfilter.av_buffersrc_write_frame(buffersrc_ctx, inputframe));
-			int res = libavfilter.av_buffersink_get_frame(buffersink_ctx, allocframe);
+			int res = libavfilter.av_buffersink_get_frame(buffersink_ctx, workframe);
 			if (res == VelvetVideoLib.AVERROR_EAGAIN || res == VelvetVideoLib.AVERROR_EOF) {
 				if (inputframe == null)
 					logFilter.atDebug().log("filter buffers empty");
 				return null;
 			}
 			libavutil.checkcode(res);
-			logFilter.atDebug().addArgument(allocframe.pts.get()).log("filter returned frame PTS={}");
+			logFilter.atDebug().addArgument(workframe.pts.get()).log("filter returned frame PTS={}");
 
-			return allocframe;
+			return workframe;
 		}
 
 		public void reset() {
-			// TODO Auto-generated method stub
-
+			logFilter.atDebug().log("draining filters");
+			while (libavfilter.av_buffersink_get_frame(buffersink_ctx, workframe) >= 0);
 		}
 
 		@Override
@@ -106,5 +119,6 @@ public class Filters implements AutoCloseable {
 			libavfilter.avfilter_inout_free(new Pointer[] {Struct.getMemory(inputs)});
 			libavfilter.avfilter_inout_free(new Pointer[] {Struct.getMemory(outputs)});
 			libavfilter.avfilter_graph_free(new Pointer[] {Struct.getMemory(graph)});
+			libavutil.av_frame_free(new AVFrame[]{workframe});
 		}
 	}

@@ -39,6 +39,7 @@ public class FilterTest extends VelvetVideoTest {
 
 	 @ParameterizedTest
 	    @CsvSource({
+	    	 "atadenoise=s=7:p=7:0a=0:0b=0:1a=0:1b=0:2a=0:2b=0",
 			 "atadenoise",
 		 	 "bm3d",
 			 "fftdnoiz",
@@ -51,8 +52,9 @@ public class FilterTest extends VelvetVideoTest {
 	    })
 	public void testTemporalFilters(String filter) {
 		IVelvetVideoLib lib = new VelvetVideoLib();
-		File pre  = dir.resolve("temporal-pre"  + filter + ".webm").toFile();
-		File post = dir.resolve("temporal-post" + filter + ".webm").toFile();
+		File pre  = dir.resolve("temporal-pre"  + filter.replace(':', '-') + ".webm").toFile();
+		File post = dir.resolve("temporal-post" + filter.replace(':', '-') + ".webm").toFile();
+		File nof = dir.resolve("temporal-nof" + filter.replace(':', '-') + ".webm").toFile();
 
 		System.err.println(pre + " / " + post);
 
@@ -62,12 +64,23 @@ public class FilterTest extends VelvetVideoTest {
 		encodeVideoWithFilter(post, lib, null);
 		List<BufferedImage> postframes = loadFrames(post, FRAME_COUNT, filter);
 
+		encodeVideoWithFilter(nof, lib, null);
+		List<BufferedImage> refframes = loadFrames(nof, FRAME_COUNT, null);
+
 		Assertions.assertEquals(FRAME_COUNT, postframes.size());
 		Assertions.assertEquals(FRAME_COUNT, preframes.size());
 		for (int i=0; i<FRAME_COUNT; i++) {
-			assertEqual(preframes.get(i), postframes.get(i), 3.0);
-		}
 
+
+			System.err.println(" *********** " + filter + " **************");
+			System.err.println(" pre to ref  " + diff(preframes.get(i), refframes.get(i)));
+			System.err.println("post to ref  " + diff(postframes.get(i), refframes.get(i)));
+			System.err.println("post to pre  " + diff(postframes.get(i), preframes.get(i)));
+			System.err.println();
+
+			if (i>7)
+				assertEqual(preframes.get(i), postframes.get(i), 10.0);
+		}
 
 	}
 
@@ -84,9 +97,10 @@ public class FilterTest extends VelvetVideoTest {
 	}
 
 	private void encodeVideoWithFilter(File file, IVelvetVideoLib lib, String filterString) {
-		IVideoEncoderBuilder encoder = lib.videoEncoder("libvpx-vp9")
+		IVideoEncoderBuilder encoder = lib.videoEncoder("libvpx")
 			.filter(filterString)
-			.bitrate(2000000)
+			.dimensions(640, 480)
+			.bitrate(20000000)
 			.framerate(3, 1);
 
 		try (IMuxer muxer = lib.muxer("webm")
@@ -94,15 +108,13 @@ public class FilterTest extends VelvetVideoTest {
 		    .build(file)) {
 
 			IEncoderVideoStream videoStream = muxer.videoEncoder(0);
-			for (int i=0; i<10; i++) {
-				BufferedImage image = colorImage(i);
+			for (int i=0; i<FRAME_COUNT; i++) {
+				BufferedImage image = colorImageNoisy(i);
 				videoStream.encode(image);
 				Assertions.assertFalse(isFlipped(image));
 			}
 		}
 	}
-
-
 
 	private boolean isFlipped(BufferedImage image) {
 		WritableRaster raster = image.getRaster();
@@ -122,7 +134,7 @@ public class FilterTest extends VelvetVideoTest {
 		raster.getPixel(x, raster.getHeight()-y-1, pixel2);
 		int diff = (pixel1[0]-pixel2[0])*(pixel1[0]-pixel2[0]) + (pixel1[1]-pixel2[1])*(pixel1[1]-pixel2[1]) + (pixel1[2]-pixel2[2])*(pixel1[2]-pixel2[2]);
 		System.err.println("Diff=" + diff);
-		return diff < 25+25+25;
+		return diff < 300;
 	}
 
 }

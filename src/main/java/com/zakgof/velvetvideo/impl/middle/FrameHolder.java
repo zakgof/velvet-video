@@ -31,7 +31,7 @@ public class FrameHolder implements AutoCloseable {
         scaleCtx = libswscale.sws_getContext(width, height, srcFormat, width, height, destFormat, 0, 0, 0, 0);
     }
 
-    private AVFrame alloc(int width, int height, AVPixelFormat format) {
+    public AVFrame alloc(int width, int height, AVPixelFormat format) {
         AVFrame f = libavutil.av_frame_alloc();
         f.width.set(width);
         f.height.set(height);
@@ -49,14 +49,18 @@ public class FrameHolder implements AutoCloseable {
     }
 
     public BufferedImage getPixels() {
-    	libavutil.checkcode(libswscale.sws_scale(scaleCtx, JNRHelper.ptr(frame.data[0]), JNRHelper.ptr(frame.linesize[0]), 0, height,
-                                       JNRHelper.ptr(biframe.data[0]), JNRHelper.ptr(biframe.linesize[0])));
-        BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
-        byte[] bytes = bytesOf(bi);
-        biframe.data[0].get().get(0,  bytes, 0, bytes.length);
-        return bi;
-
+    	return getPixels(frame);
     }
+
+	public BufferedImage getPixels(AVFrame f) {
+		libavutil.checkcode(
+				libswscale.sws_scale(scaleCtx, JNRHelper.ptr(f.data[0]), JNRHelper.ptr(f.linesize[0]), 0,
+						height, JNRHelper.ptr(biframe.data[0]), JNRHelper.ptr(biframe.linesize[0])));
+		BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
+		byte[] bytes = bytesOf(bi);
+		biframe.data[0].get().get(0, bytes, 0, bytes.length);
+		return bi;
+	}
 
     private static byte[] bytesOf(BufferedImage image) {
         Raster raster = image.getRaster();
@@ -73,5 +77,6 @@ public class FrameHolder implements AutoCloseable {
        libavutil.av_frame_free(new AVFrame[] {biframe});
        libswscale.sws_freeContext(scaleCtx);
     }
+
 
 }

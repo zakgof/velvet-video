@@ -302,7 +302,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 				encodeFrame(frame, duration);
 			} else {
 				Feeder.feed(frame,
-					inputFrame -> filters.submitFrame(inputFrame, frameHolder.frame),
+					inputFrame -> filters.submitFrame(inputFrame),
 					outputFrame -> encodeFrame(outputFrame, duration));
 			}
 		}
@@ -716,11 +716,11 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             	for (;;) {
 	            	AVFrame frame = feedPacket(pack);
 	            	if (filters != null) {
-	           			frame = filters.submitFrame(frame, frameHolder.frame);
+	           			frame = filters.submitFrame(frame);
 	            	}
 	            	if (frame == null)
 	            		return null;
-	            	long pts = frameHolder.frame.pts.get();
+	            	long pts = frame.pts.get();
 	                logDecoder.atDebug().addArgument(pts).log("delivered frame pts={}");
 	                if (skipToPts != -1) {
 	                	if (pts == AVNOPTS_VALUE) {
@@ -741,7 +741,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 	                    }
 	                    skipToPts = -1;
 	                }
-	                return new DecodedVideoPacket(frameOf(frameHolder.getPixels()));
+	                return new DecodedVideoPacket(frameOf(frameHolder.getPixels(frame)));
             	}
             }
 

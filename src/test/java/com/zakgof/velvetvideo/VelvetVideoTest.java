@@ -8,9 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
@@ -26,12 +25,12 @@ public class VelvetVideoTest {
 		dir = Files.createTempDirectory("velvet-video-test-");
 	}
 
-	@AfterAll
+//	@AfterAll
 	private static void cleanup() {
 		dir.toFile().delete();
 	}
 
-	@AfterEach
+//	@AfterEach
 	private void clean() {
 		for (File file : dir.toFile().listFiles())
 			file.delete();
@@ -48,6 +47,18 @@ public class VelvetVideoTest {
 				bytes[offset + 1] = (byte) ((int) (127 + 127 * Math.sin(y * 0.081 / (seed + 1))) & 0xFF);
 				bytes[offset + 2] = (byte) ((int) (127 + 127 * Math.sin((x + y) * 0.01 / (seed + 1))) & 0xFF);
 			}
+		}
+		return image;
+	}
+
+	protected static BufferedImage colorImageNoisy(int seed) {
+		BufferedImage image = colorImage(seed);
+		DataBufferByte dataBuffer = (DataBufferByte) image.getRaster().getDataBuffer();
+		byte[] bytes = dataBuffer.getData();
+		Random r = new Random(seed * 50);
+		for (int i=0; i<bytes.length; i++) {
+			if (r.nextInt(20) == 0 )
+				bytes[i] += r.nextInt(50);
 		}
 		return image;
 	}
