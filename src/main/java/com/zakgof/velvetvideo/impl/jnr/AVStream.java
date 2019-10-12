@@ -2,11 +2,6 @@ package com.zakgof.velvetvideo.impl.jnr;
 
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
-import jnr.ffi.Struct.Pointer;
-import jnr.ffi.Struct.Signed32;
-import jnr.ffi.Struct.StructRef;
-import jnr.ffi.Struct.int32_t;
-import jnr.ffi.Struct.int64_t;
 
 public class AVStream extends Struct {
     public AVStream(Runtime runtime) {
@@ -16,7 +11,7 @@ public class AVStream extends Struct {
     public Signed32 index = new Signed32();
     public Signed32 id = new Signed32();
 
-    public StructRef<AVCodecContext> codec = new StructRef<AVCodecContext>(AVCodecContext.class);
+    public StructRef<AVCodecContext> codec = new StructRef<>(AVCodecContext.class);
 
     public Pointer priv_data = new Pointer();
     public AVRational time_base = inner(new AVRational(getRuntime()));
@@ -46,10 +41,10 @@ public class AVStream extends Struct {
     public AVRational r_frame_rate = inner(new AVRational(getRuntime()));
 
     public Pointer recommended_encoder_configuration = new Pointer();
-    public StructRef<AVCodecParameters> codecpar = new StructRef<AVCodecParameters>(AVCodecParameters.class);
+    public StructRef<AVCodecParameters> codecpar = new StructRef<>(AVCodecParameters.class);
     public Pointer info = new Pointer();
 
-    public Signed32 pts_wrap_bits = new Signed32();  /**< number of bits in pts (used for wrapping control) */
+    public Signed32 pts_wrap_bits = new Signed32();
     public int64_t first_dts = new int64_t();
     public int64_t cur_dts = new int64_t();
     public int64_t last_IP_pts = new int64_t();
