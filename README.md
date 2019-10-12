@@ -1,14 +1,26 @@
 # velvet-video
 Java library for encoding/decoding/muxing/demuxing video
 
+- create video from still images
+- extract frames from a video
+- remux video from one format to another
+- transcode (recompress) videos using another codec
+- change video timing (slo-mo, timelapse etc)
+- merge videos or split them to segments
+- apply filters of transformations (before encoding or after decoding)
+
+velvet-video supports dozens of container formats (including mp4, avi, webm, matroska) and codecs (including x264, hevc, vp9, av1).
+
+
 [![Travis CI](https://travis-ci.org/zakgof/velvet-video.svg?branch=release)](https://travis-ci.org/zakgof/velvet-video)
 [![velvet-video on bintray](https://api.bintray.com/packages/zakgof/maven/velvet-video/images/download.svg)](https://bintray.com/zakgof/maven/velvet-video)
 
-velvet-video is using FFmpeg libraries via JNR.
+velvet-video embeds FFmpeg libraries under the hood, so it work at native speed and uses all FFmpeg's hardware optimization.
+Extracting and loading native libs is fully covered by velvet-video.
 
 Supported platforms:    
  - Windows 64 bit
- - Linux 64 bit (coming soon)
+ - Linux 64 bit
 
 ## Setup
 
@@ -27,8 +39,8 @@ The choice for native package is:
 
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video-core:0.1.0'
-    compile 'com.github.zakgof:velvet-video-natives:0.0.1.full'
+    compile 'com.github.zakgof:velvet-video-core:0.2.0'
+    compile 'com.github.zakgof:velvet-video-natives:0.2.0.full'
 }
 ````
 
@@ -39,7 +51,7 @@ dependencies {
 ````java
     IVideoLib lib = new FFMpegVideoLib();
     try (IMuxer muxer = lib.muxer("matroska")
-        .video(lib.encoder("av1").bitrate(100000))
+        .video(lib.videoEncoder("libaom-av1").bitrate(100000))
         .build(new File("/some/path/output.mkv"))) {            
            muxer.video(0).encode(image1, 0);
            muxer.video(0).encode(image2, 1);
@@ -51,7 +63,7 @@ dependencies {
 ````java
 	IVideoLib lib = new FFMpegVideoLib();
 	try (IDemuxer demuxer = lib.demuxer(new File("/some/path/example.mp4"))) {
-	    IDecoderVideoStream videoStream = demuxer.video(0);
+	    IDecoderVideoStream videoStream = demuxer.videoStream(0);
 	    IFrame videoFrame;
 	    while ((videoFrame = videoStream.nextFrame()) != null) {
 	   	    BufferedImage image = videoFrame.image();
