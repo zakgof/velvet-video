@@ -1,26 +1,27 @@
-package com.zakgof.velvetvideo;
+package com.zakgof.velvetvideo.impl;
 
-import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 
-import com.zakgof.velvetvideo.IVideoLib.ISeekableInput;
+import com.zakgof.velvetvideo.ISeekableOutput;
+import com.zakgof.velvetvideo.VelvetVideoException;
 
-public class FileSeekableInput implements ISeekableInput {
+public class FileSeekableOutput implements ISeekableOutput {
 
     private SeekableByteChannel channel;
-    private FileInputStream fos;
+    private FileOutputStream fos;
 
-    public FileSeekableInput(FileInputStream fis) {
-        this.fos = fis;
-        this.channel = fis.getChannel();
+    public FileSeekableOutput(FileOutputStream fos) {
+        this.fos = fos;
+        this.channel = fos.getChannel();
     }
 
     @Override
-    public int read(byte[] bytes) {
+    public void write(byte[] bytes) {
         try {
-            return channel.read(ByteBuffer.wrap(bytes));
+            channel.write(ByteBuffer.wrap(bytes));
         } catch (IOException e) {
             throw new VelvetVideoException(e);
         }
@@ -40,15 +41,6 @@ public class FileSeekableInput implements ISeekableInput {
         try {
             channel.close();
             fos.close();
-        } catch (IOException e) {
-            throw new VelvetVideoException(e);
-        }
-    }
-
-    @Override
-    public long size() {
-        try {
-            return channel.size();
         } catch (IOException e) {
             throw new VelvetVideoException(e);
         }

@@ -10,52 +10,46 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.zakgof.velvetvideo.IVideoLib.IDecodedPacket;
-import com.zakgof.velvetvideo.IVideoLib.IDecoderVideoStream;
-import com.zakgof.velvetvideo.IVideoLib.IDemuxer;
-import com.zakgof.velvetvideo.IVideoLib.IMuxer;
-import com.zakgof.velvetvideo.IVideoLib.IVideoStreamProperties;
-
 public class RawTest extends VelvetVideoTest {
 
 	private static final int FRAMES = 10;
 
 	 @ParameterizedTest
-	    @CsvSource({
+    @CsvSource({
 
-	         "ffv1,         avi",
-	         "flv,          flv",
-	         "h263p,        avi",
-	         "mjpeg,        avi",
+         "ffv1,         avi",
+         "flv,          flv",
+         "h263p,        avi",
+         "mjpeg,        avi",
 
-	         "msmpeg4,      avi",
-	         "msmpeg4v2,    avi",
-	         "msmpeg4v2,    matroska",
+         "msmpeg4,      avi",
+         "msmpeg4v2,    avi",
+         "msmpeg4v2,    matroska",
 
-	         "libx264,      mp4",
-	         "libx264,      avi",
-	         "libx264,      mov",
-	     //  "libx264,      matroska", // FAIL - Invalid data
+         "libx264,      mp4",
+         "libx264,      avi",
+         "libx264,      mov",
+     //  "libx264,      matroska", // FAIL - Invalid data
 
-	         "libopenh264,  avi",
-	         "libopenh264,  mov",
-	         "libopenh264,  mp4",
-	     //  "libopenh264,  matroska", // FAIL - Invalid data
+         "libopenh264,  avi",
+         "libopenh264,  mov",
+         "libopenh264,  mp4",
+     //  "libopenh264,  matroska", // FAIL - Invalid data
 
-	         "libx265,      mp4",
-	         "libx265,      matroska",
-	         "wmv1,         avi",
-	         "wmv2,         avi",
-	         "mjpeg,        avi",
-	         "mpeg1video,   avi",
-	         "mpeg2video,   avi",
-	         "mpeg4,        mp4",
-	         "libvpx,        webm",
-	         "libvpx-vp9,    webm",
-	         "libvpx,        ogg",
-	         "libvpx,        matroska",
-	         "libvpx-vp9,    matroska",
-	    })
+         "libx265,      mp4",
+         "libx265,      matroska",
+         "wmv1,         avi",
+         "wmv2,         avi",
+         "mjpeg,        avi",
+         "mpeg1video,   avi",
+         "mpeg2video,   avi",
+         "mpeg4,        mp4",
+         "libvpx,        webm",
+         "libvpx-vp9,    webm",
+         "libvpx,        ogg",
+         "libvpx,        matroska",
+         "libvpx-vp9,    matroska",
+    })
 	public void testRemux(String codec, String format) throws IOException {
 		File file = dir.resolve("orig-" + codec + "." + format).toFile();
 		File remuxed = dir.resolve("remuxed-" + codec + "." + format).toFile();
@@ -67,11 +61,11 @@ public class RawTest extends VelvetVideoTest {
 
 		// Remux raw stream to MP4
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			IDecoderVideoStream origStream = demuxer.video(0);
-			try (IMuxer muxer = lib.muxer(format).video(origStream).build(remuxed)) {
+			IDecoderVideoStream origStream = demuxer.videoStream(0);
+			try (IMuxer muxer = lib.muxer(format).videoRemuxer(origStream).build(remuxed)) {
 				byte[] rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
-					muxer.video(0).writeRaw(rawPacket);
+					muxer.videoRemuxer(0).writeRaw(rawPacket);
 				}
 			}
 		}
@@ -99,14 +93,14 @@ public class RawTest extends VelvetVideoTest {
 		// Remux raw streams
 		int TIMES = 4;
 		try (IMuxer muxer = lib.muxer("mp4")
-		    .video(lib.demuxer(file).video(0))
+		    .videoRemuxer(lib.demuxer(file).videoStream(0))
 		    .build(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
 				try (IDemuxer demuxer = lib.demuxer(file)) {
 					IDecoderVideoStream origStream = demuxer.videos().get(0);
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
-						muxer.video(0).writeRaw(rawPacket);
+						muxer.videoRemuxer(0).writeRaw(rawPacket);
 					}
 				}
 			}
@@ -121,15 +115,85 @@ public class RawTest extends VelvetVideoTest {
 					assertEqual(remuxedImage, original.get(i));
 				}
 			}
-			IVideoStreamProperties mergedStreamProperties = demuxer.video(0).properties();
-			IVideoStreamProperties originalStreamProperties = lib.demuxer(file).video(0).properties();
+			IVideoStreamProperties mergedStreamProperties = demuxer.videoStream(0).properties();
+			IVideoStreamProperties originalStreamProperties = lib.demuxer(file).videoStream(0).properties();
 			Assertions.assertEquals(originalStreamProperties.width(), mergedStreamProperties.width());
 			Assertions.assertEquals(originalStreamProperties.height(), mergedStreamProperties.height());
 
 			Assertions.assertEquals(originalStreamProperties.frames() * TIMES, mergedStreamProperties.frames());
 			Assertions.assertEquals(originalStreamProperties.framerate(), mergedStreamProperties.framerate(), 0.001);
 
-			Assertions.assertEquals(originalStreamProperties.duration() * TIMES, mergedStreamProperties.duration(), 1.0);
+			Assertions.assertEquals(originalStreamProperties.nanoduration() * TIMES, mergedStreamProperties.nanoduration(), 1.0);
 		}
 	}
+
+	 @ParameterizedTest
+	    @CsvSource({
+
+	         "ffv1,         avi",
+	     //    "flv,          flv",   TODO: Investigate failure
+	         "h263p,        avi",
+	         "mjpeg,        avi",
+
+	         "msmpeg4,      avi",
+	         "msmpeg4v2,    avi",
+	     //  "msmpeg4v2,    matroska", TODO: Investigate failure
+
+	         "libx264,      mp4",
+	         "libx264,      avi",
+	         "libx264,      mov",
+	     //  "libx264,      matroska", // FAIL - Invalid data
+
+	         "libopenh264,  avi",
+	         "libopenh264,  mov",
+	         "libopenh264,  mp4",
+	     //  "libopenh264,  matroska", // FAIL - Invalid data
+
+	         "libx265,      mp4",
+  	    //    "libx265,      matroska",     TODO: Investigate failure
+	         "wmv1,         avi",
+	         "wmv2,         avi",
+	         "mjpeg,        avi",
+	         "mpeg1video,   avi",
+	         "mpeg2video,   avi",
+	         "mpeg4,        mp4",
+	  //     "libvpx,        webm",  TODO: Investigate failure
+	         "libvpx-vp9,    webm",
+	         "libvpx,        ogg",
+	         "libvpx,        matroska",
+	         "libvpx-vp9,    matroska",
+	    })
+		public void testSlowdownWithoutTranscoding(String codec, String format) throws IOException {
+			File file = dir.resolve("slowdown-orig-" + codec + "." + format).toFile();
+			File remuxed = dir.resolve("slowdown-remuxed-" + codec + "." + format).toFile();
+			System.err.println(file + "->" + remuxed);
+
+			// Create and read back the original video file
+			createSingleStreamVideo(codec, format, file, FRAMES);
+			List<BufferedImage> rest1 = loadFrames(file, FRAMES);
+
+			// Remux raw stream to MP4
+			try (IDemuxer demuxer = lib.demuxer(file)) {
+				IDecoderVideoStream origStream = demuxer.videoStream(0);
+				try (IMuxer muxer = lib.muxer(format).videoRemuxer(lib.videoRemux(origStream).framerate(1)).build(remuxed)) {
+					byte[] rawPacket;
+					while ((rawPacket = origStream.nextRawPacket()) != null) {
+						muxer.videoRemuxer(0).writeRaw(rawPacket);
+					}
+				}
+			}
+
+			// Read and check MP4 frames
+			try (IDemuxer demuxer = lib.demuxer(remuxed)) {
+				IDecoderVideoStream videoStream = demuxer.videoStream(0);
+				for (int i=0; i<FRAMES; i++) {
+					IVideoFrame frame = videoStream.nextFrame();
+					Assertions.assertEquals(1000000000L, frame.nanoduration());
+					BufferedImage remuxedImage = frame.image();
+					assertEqual(remuxedImage, rest1.get(i));
+				}
+				Assertions.assertEquals(FRAMES * 1000000000L, videoStream.properties().nanoduration());
+			}
+		}
 }
+

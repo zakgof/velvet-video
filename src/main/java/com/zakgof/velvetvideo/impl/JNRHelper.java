@@ -1,4 +1,4 @@
-package com.zakgof.velvetvideo;
+package com.zakgof.velvetvideo.impl;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,44 +7,74 @@ import java.lang.reflect.Constructor;
 import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Properties;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.zakgof.velvetvideo.VelvetVideoException;
+
 import jnr.ffi.LibraryLoader;
 import jnr.ffi.Platform;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
+import jnr.ffi.byref.PointerByReference;
 import jnr.ffi.provider.ParameterFlags;
 
-class JNRHelper {
+public class JNRHelper {
 
+	private static String MIN_NATIVE_VERSION = "0.2.0";
 
 	private static Logger LOG = LoggerFactory.getLogger("velvet-video");
     private static String PLATFORM = getPlatform();
-    private static File extractionDir = createExtractionDirectory();
+    private static File extractionDir = initializeExtractionDirectory();
 
-	private static File createExtractionDirectory() {
+    private static File initializeExtractionDirectory() {
+    	String path = "velvet-video-natives/version.inf";
+		URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
+    	if (resource == null) {
+    		throw new VelvetVideoException("Cannot locate native libs. Make sure that velvet-video-natives in on classpath.");
+    	}
+    	try {
+	    	URLConnection connection = resource.openConnection();
+	    	connection.connect();
+	    	try (InputStream is = connection.getInputStream()) {
+	        	Properties props = new Properties();
+	        	props.load(is);
+	        	String version = props.getProperty("Version");
+	        	LOG.info("Loading velvet-video-natives version " + version);
+	        	if (version.compareTo(MIN_NATIVE_VERSION) < 0) {
+	        		throw new VelvetVideoException("Minimum compatible version of velvet-video-natives is " + MIN_NATIVE_VERSION + ", detected version " + version);
+	        	}
+	        	return createExtractionDirectory(version);
+	    	}
+        } catch (IOException e) {
+			throw new VelvetVideoException("Error while loading native version manifest", e);
+		}
+	}
+
+	private static File createExtractionDirectory(String version) {
 		String home = System.getProperty("user.home");
-		File dir = Paths.get(home, ".velvet-video", "natives", "0.0.0").toFile(); // TODO
+		File dir = Paths.get(home, ".velvet-video", "natives", version).toFile();
 		if (!dir.exists() && !dir.mkdirs()) {
 			throw new VelvetVideoException("Cannot create a dir for extracting native libraries.");
 		}
 		return dir;
 	}
 
-    static <L> L load(Class<L> clazz, String libName) {
+	public static <L> L load(Class<L> clazz, String libName) {
 
         try {
 
         	Platform nativePlatform = Platform.getNativePlatform();
             String libfile = nativePlatform.mapLibraryName(libName);
-        	String folder = "binaries/" + PLATFORM + "/";
+        	String folder = "velvet-video-natives/" + PLATFORM + "/";
 			String path = folder + libfile;
 			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
         	if (resource == null) {
@@ -65,7 +95,7 @@ class JNRHelper {
                                 throw new VelvetVideoException("Error extracting ffmpeg native libraries");
                             }
                         });
-                }  catch (IOException e) {
+                } catch (IOException e) {
                     throw new VelvetVideoException("Error extracting ffmpeg native libraries");
                 }
             }
@@ -103,7 +133,7 @@ class JNRHelper {
         }
     }
 
-    static <T extends Struct> T struct(Class<T> clazz, Pointer value) {
+    public static <T extends Struct> T struct(Class<T> clazz, Pointer value) {
         try {
             Constructor<T> constructor = clazz.getConstructor(Runtime.class);
             T instance = constructor.newInstance(value.getRuntime());
@@ -114,8 +144,14 @@ class JNRHelper {
             throw new VelvetVideoException(e);
         }
     }
+    
+	public static <T extends Struct> T struct(Class<T> clazz, PointerByReference pp) {
+		return struct(clazz, pp.getValue());
+	}
 
     public static Pointer ptr(Struct.NumberField member) {
         return member.getMemory().slice(member.offset());
     }
+
+
 }
