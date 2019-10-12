@@ -15,7 +15,7 @@ velvet-video supports dozens of container formats (including mp4, avi, webm, mat
 [![Travis CI](https://travis-ci.org/zakgof/velvet-video.svg?branch=release)](https://travis-ci.org/zakgof/velvet-video)
 [![velvet-video on bintray](https://api.bintray.com/packages/zakgof/maven/velvet-video/images/download.svg)](https://bintray.com/zakgof/maven/velvet-video)
 
-velvet-video embeds FFmpeg libraries under the hood, so it work at native speed and uses all FFmpeg's hardware optimization.
+velvet-video embeds FFmpeg libraries under the hood, so it works at native speed and uses all FFmpeg's hardware optimization.
 Extracting and loading native libs is fully covered by velvet-video.
 
 Supported platforms:    
@@ -39,7 +39,7 @@ The choice for native package is:
 
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video-core:0.2.0'
+    compile 'com.github.zakgof:velvet-video:0.2.0'
     compile 'com.github.zakgof:velvet-video-natives:0.2.0.full'
 }
 ````
@@ -49,7 +49,7 @@ dependencies {
 ### Encode images into a video:
 
 ````java
-    IVideoLib lib = new FFMpegVideoLib();
+    IVelvetVideoLib lib = new VelvetVideoLib();
     try (IMuxer muxer = lib.muxer("matroska")
         .video(lib.videoEncoder("libaom-av1").bitrate(100000))
         .build(new File("/some/path/output.mkv"))) {            
@@ -61,7 +61,7 @@ dependencies {
 ### Obtain images from a video:
 
 ````java
-	IVideoLib lib = new FFMpegVideoLib();
+	IVelvetVideoLib lib = new VelvetVideoLib();
 	try (IDemuxer demuxer = lib.demuxer(new File("/some/path/example.mp4"))) {
 	    IDecoderVideoStream videoStream = demuxer.videoStream(0);
 	    IFrame videoFrame;
