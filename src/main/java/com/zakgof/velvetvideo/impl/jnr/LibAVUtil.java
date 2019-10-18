@@ -9,16 +9,20 @@ import com.zakgof.velvetvideo.VelvetVideoException;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
 import jnr.ffi.annotations.In;
+import jnr.ffi.types.int64_t;
 import jnr.ffi.types.size_t;
 
 public interface LibAVUtil {
-	
+
 	static final int AV_DICT_IGNORE_SUFFIX = 2;
-	
+
 
     static final int ERROR_TEXT_BUFFER_SIZE = 512;
 
-	
+
+    public static final long AVNOPTS_VALUE = -9223372036854775808L;
+
+
 	AVFrame av_frame_alloc();
 
 	int av_frame_get_buffer(AVFrame frame, int align);
@@ -29,6 +33,11 @@ public interface LibAVUtil {
 
 	int av_dict_set(Pointer[] pm, String key, String value, int flags);
 
+	void av_opt_set_int(Pointer object, String name, @int64_t int value, int flags);
+
+	void av_opt_set_sample_fmt(Pointer object, String name, AVSampleFormat value, int flags);
+
+
 	int av_strerror(int errnum, Pointer errbuf, int errbuf_size);
 
 	int av_log_set_level(int val);
@@ -38,6 +47,10 @@ public interface LibAVUtil {
 	AVDictionaryEntry av_dict_get(@In Pointer dictionary, @In String key, @In AVDictionaryEntry prev, int flags);
 
 	long av_frame_get_pkt_duration(AVFrame frame);
+
+	void av_samples_alloc(Pointer[] buffer, int[] linesize, int nb_channels, int nb_samples, AVSampleFormat sample_fmt, int align);
+
+	@int64_t int av_get_default_channel_layout(int targetChannels);
 
 	// void av_log_set_callback(ILogger logger);
 
@@ -55,7 +68,7 @@ public interface LibAVUtil {
 		}
 		return opts;
 	}
-	
+
 	default Map<String, String> dictionaryToMap(Pointer dictionary) {
         Map<String, String> metadata = new LinkedHashMap<>();
         AVDictionaryEntry entry = null;
@@ -81,5 +94,8 @@ public interface LibAVUtil {
         }
         return code;
 	}
+
+
+
 
 }

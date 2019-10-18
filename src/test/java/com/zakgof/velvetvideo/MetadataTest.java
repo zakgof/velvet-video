@@ -22,7 +22,7 @@ public class MetadataTest extends VelvetVideoTest {
             muxer.videoEncoder(0).encode(colorImage(2));
         }
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
-            Map<String, String> restored = demuxer.videos().get(0).metadata();
+            Map<String, String> restored = demuxer.videoStreams().get(0).metadata();
             Assertions.assertEquals("ukr", restored.get("language"));
             Assertions.assertEquals("Track 4", restored.get("handler_name"));
         }
@@ -97,7 +97,7 @@ public class MetadataTest extends VelvetVideoTest {
             }
         }
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
-            IDecoderVideoStream videoStream = demuxer.videos().get(0);
+            IDecoderVideoStream videoStream = demuxer.videoStreams().get(0);
 			IVideoStreamProperties restored = videoStream.properties();
 			for (int i=0; i<FRAMES; i++) {
 	            IVideoFrame frame = videoStream.nextFrame();
