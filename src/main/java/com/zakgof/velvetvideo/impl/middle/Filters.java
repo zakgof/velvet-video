@@ -90,7 +90,7 @@ public class Filters implements AutoCloseable {
 				workframe = libavutil.av_frame_alloc();
 				workframe.width.set(inputframe.width.get());
 				workframe.height.set(inputframe.height.get());
-				workframe.pix_fmt.set(inputframe.pix_fmt.get());
+				workframe.format.set(inputframe.format.get());
 				workframe.pts.set(inputframe.pts.get());
 		        libavutil.checkcode(libavutil.av_frame_get_buffer(workframe, 0));
 			}

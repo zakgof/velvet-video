@@ -14,8 +14,8 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 
     private static final int FRAMES = 16;
 
-    protected void codeclist(Collection<String> expectedCodecs) throws IOException {
-        List<String> codecs = lib.codecs(Direction.Encode);
+    protected void codeclist(Collection<String> expectedCodecs, MediaType mediaType) throws IOException {
+        List<String> codecs = lib.codecs(Direction.Encode, mediaType);
         System.err.println(codecs);
         Set<String> codecSet = new HashSet<>(expectedCodecs);
         codecSet.removeAll(codecs);

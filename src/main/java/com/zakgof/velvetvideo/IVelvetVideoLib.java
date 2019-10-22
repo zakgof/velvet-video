@@ -6,25 +6,30 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.List;
 
+import javax.sound.sampled.AudioFormat;
 
 public interface IVelvetVideoLib {
 
-    List<String> codecs(Direction dir);
+	List<String> codecs(Direction dir, MediaType mediaType);
 
-    IVideoEncoderBuilder videoEncoder(String format);
+	IVideoEncoderBuilder videoEncoder(String codec);
 
-    IVideoRemuxerBuilder videoRemux(IDecoderVideoStream decoder);
+	IAudioEncoderBuilder audioEncoder(String codec, AudioFormat audioFormat);
 
-    IMuxerBuilder muxer(String format);
+	IRemuxerBuilder remuxer(IDecoderStream<?, ?, ?> decoder);
 
-    IDemuxer demuxer(InputStream is);
+	IMuxerBuilder muxer(String format);
 
-    default IDemuxer demuxer(File file) {
-        try {
-            return demuxer(new FileInputStream(file));
-        } catch (FileNotFoundException e) {
-            throw new VelvetVideoException(e);
-        }
-    }
+	IDemuxer demuxer(InputStream is);
+
+	default IDemuxer demuxer(File file) {
+		try {
+			return demuxer(new FileInputStream(file));
+		} catch (FileNotFoundException e) {
+			throw new VelvetVideoException(e);
+		}
+	}
+
+
 
 }

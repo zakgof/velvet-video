@@ -39,8 +39,8 @@ public class FilterTest extends VelvetVideoTest {
 
 	 @ParameterizedTest
 	    @CsvSource({
-	    	 "atadenoise=s=7:p=7:0a=0:0b=0:1a=0:1b=0:2a=0:2b=0",
-			 "atadenoise",
+//	    	 "atadenoise=s=7:p=7:0a=0:0b=0:1a=0:1b=0:2a=0:2b=0",
+//			 "atadenoise",
 		 	 "bm3d",
 			 "fftdnoiz",
 			 "hqdn3d",

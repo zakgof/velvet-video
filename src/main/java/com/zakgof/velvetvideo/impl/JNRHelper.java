@@ -29,7 +29,7 @@ import jnr.ffi.provider.ParameterFlags;
 
 public class JNRHelper {
 
-	private static String MIN_NATIVE_VERSION = "0.2.0";
+	private static String MIN_NATIVE_VERSION = "0.2.1";
 
 	private static Logger LOG = LoggerFactory.getLogger("velvet-video");
     private static String PLATFORM = getPlatform();
@@ -144,7 +144,7 @@ public class JNRHelper {
             throw new VelvetVideoException(e);
         }
     }
-    
+
 	public static <T extends Struct> T struct(Class<T> clazz, PointerByReference pp) {
 		return struct(clazz, pp.getValue());
 	}

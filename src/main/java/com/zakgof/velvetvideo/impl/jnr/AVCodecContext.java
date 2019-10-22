@@ -2,14 +2,6 @@ package com.zakgof.velvetvideo.impl.jnr;
 
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
-import jnr.ffi.Struct.Enum32;
-import jnr.ffi.Struct.Float;
-import jnr.ffi.Struct.Pointer;
-import jnr.ffi.Struct.Signed32;
-import jnr.ffi.Struct.StructRef;
-import jnr.ffi.Struct.Unsigned32;
-import jnr.ffi.Struct.Unsigned64;
-import jnr.ffi.Struct.int64_t;
 
 public class AVCodecContext extends Struct {
 
@@ -105,16 +97,16 @@ public class AVCodecContext extends Struct {
     Signed32 field_order = new Signed32(); // OK
 
     /* audio only */
-    Signed32 sample_rate = new Signed32();
-    Signed32 channels = new Signed32();
-    Signed32 sample_fmt = new Signed32();
+    public Signed32 sample_rate = new Signed32();
+    public Signed32 channels = new Signed32();
+    public Enum32<AVSampleFormat> sample_fmt = new Enum32<>(AVSampleFormat.class);
 
-    Signed32 frame_size = new Signed32();
-    Signed32 frame_number = new Signed32();
-    Signed32 block_align = new Signed32();
-    Signed32 cutoff = new Signed32();
+    public Signed32 frame_size = new Signed32();
+    public Signed32 frame_number = new Signed32();
+    public Signed32 block_align = new Signed32();
+    public Signed32 cutoff = new Signed32();
 
-    Unsigned64 channel_layout = new Unsigned64();
+    public Unsigned64 channel_layout = new Unsigned64();
     Unsigned64 request_channel_layout = new Unsigned64();
 
     Signed32 audio_service_type = new Signed32();

@@ -10,8 +10,13 @@ import org.junit.jupiter.params.provider.CsvSource;
 public class FullEncodeDecodeTest extends GenericEncodeDecodeTest {
 
     @Test
-    public void testCodeclist() throws IOException {
-        codeclist(Arrays.asList("wmv1", "wmv2", "mjpeg", "mpeg4", "libx264", "libx265", "libvpx", "libvpx-vp9", "libaom-av1"));
+    public void testVideoEncodersList() throws IOException {
+        codeclist(Arrays.asList("wmv1", "wmv2", "mjpeg", "mpeg4", "libx264", "libx265", "libvpx", "libvpx-vp9", "libaom-av1"), MediaType.Video);
+    }
+
+    @Test
+    public void testAudioEncodersList() throws IOException {
+        codeclist(Arrays.asList("aac", "ac3", "libvorbis", "opus", "flac", "mp2", "vorbis"), MediaType.Audio);
     }
 
     @ParameterizedTest
