@@ -1,10 +1,12 @@
 # velvet-video
-Java library for encoding/decoding/muxing/demuxing video
+Java library for encoding/decoding/muxing/demuxing video and audio
 
+With velvet-video it's easy to:
 - create video from still images
 - extract frames from a video
-- remux video from one format to another
-- transcode (recompress) videos using another codec
+- extract audio tracks from video files
+- remux video or audio from one format to another
+- transcode (recompress) videos/audios using another codec
 - change video timing (slo-mo, timelapse etc)
 - merge videos or split them to segments
 - apply filters of transformations (before encoding or after decoding)
@@ -21,6 +23,8 @@ Extracting and loading native libs is fully covered by velvet-video.
 Supported platforms:    
  - Windows 64 bit
  - Linux 64 bit
+ 
+Please contact me if you need support for a platform not listed here. 
 
 ## Setup
 
