@@ -24,4 +24,6 @@ public class AVCodec extends Struct {
     Signed32 capabilities = new Signed32();
     StructRef<AVRational> supported_framerates = new StructRef<>(AVRational.class); ///< array of supported framerates, or NULL if any, array is terminated by {0,0}
     public Pointer pix_fmts = new Pointer();
+    public Pointer supported_samplerates = new Pointer();
+    public Pointer sample_fmts = new Pointer();
 }

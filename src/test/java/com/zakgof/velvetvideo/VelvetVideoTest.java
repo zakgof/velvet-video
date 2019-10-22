@@ -4,14 +4,26 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioFormat;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.opentest4j.AssertionFailedError;
+import org.quifft.QuiFFT;
+import org.quifft.output.FFTResult;
+import org.quifft.params.WindowFunction;
 
 import com.zakgof.velvetvideo.impl.VelvetVideoLib;
 
@@ -22,7 +34,9 @@ public class VelvetVideoTest {
 
 	@BeforeAll
 	private static void setup() throws IOException {
-		dir = Files.createTempDirectory("velvet-video-test-");
+		String home = System.getProperty("user.home");
+		dir = Paths.get(home, ".velvet-video", "test");
+		dir.toFile().mkdirs();
 	}
 
 //	@AfterAll
@@ -34,6 +48,10 @@ public class VelvetVideoTest {
 	private void clean() {
 		for (File file : dir.toFile().listFiles())
 			file.delete();
+	}
+
+	protected File file(String name) {
+		return new File(dir.toFile(), name);
 	}
 
 	protected static BufferedImage colorImage(int seed) {
@@ -96,7 +114,19 @@ public class VelvetVideoTest {
 		Assertions.assertEquals(im1.getWidth(), im2.getWidth());
 		Assertions.assertEquals(im1.getHeight(), im2.getHeight());
 		double diff = diff(im1, im2);
-		Assertions.assertEquals(0, diff, tolerance);
+		if (Math.abs(diff) > tolerance) {
+			saveImage(im1, file("im1.png"));
+			saveImage(im2, file("im2.png"));
+			Assertions.fail("images differ");
+		}
+	}
+
+	private void saveImage(BufferedImage im1, File file) {
+		try {
+			ImageIO.write(im1, "png", file);
+		} catch (IOException e) {
+			throw new AssertionFailedError("", e);
+		}
 	}
 
 	protected BufferedImage[] createSingleStreamVideo(String codec, String format, File file, int frames) {
@@ -174,4 +204,63 @@ public class VelvetVideoTest {
 		Assertions.assertEquals(frames, restored.size());
 		return restored;
 	}
+
+	protected void assertAudioEqual(AudioFormat format, byte[] audio1, byte[] audio2) throws Exception {
+		FFTResult fft1 = fft(format, audio1);
+		FFTResult fft2 = fft(format, audio2);
+		assertFftsEquals(fft1, fft2, 0.07);
+	}
+
+	private void assertFftsEquals(FFTResult fft1, FFTResult fft2, double tolerance) {
+		double avgdiff = 0;
+		Assertions.assertEquals(fft1.fftFrames.length, fft2.fftFrames.length);
+		for (int i=0; i<fft1.fftFrames.length; i++) {
+			Assertions.assertEquals(fft1.fftFrames[i].bins.length, fft2.fftFrames[i].bins.length);
+			for (int b=0; b<fft1.fftFrames[i].bins.length; b++) {
+				double diff = Math.abs((fft1.fftFrames[i].bins[b].amplitude - fft2.fftFrames[i].bins[b].amplitude)/fft2.fftFrames[i].bins[b].amplitude);
+				avgdiff += diff / (fft1.fftFrames.length * fft1.fftFrames[i].bins.length);
+			}
+		}
+		System.err.println("Audio file difference: " + avgdiff);
+		Assertions.assertTrue(avgdiff < tolerance, "Audio waveforms differ too much: " + avgdiff);
+	}
+
+	private FFTResult fft(AudioFormat format, byte[] buf) throws Exception {
+		File f = AudioUtil.saveWav(format, buf, file("tmp.wav"));
+		QuiFFT quiFFT = new QuiFFT(f).windowFunction(WindowFunction.BLACKMAN).windowSize(4096).windowOverlap(0).normalized(true);
+		return quiFFT.fullFFT();
+	}
+
+	protected byte[] readAudio(File file) {
+		IVelvetVideoLib lib = new VelvetVideoLib();
+		IDecoderAudioStream audioStream = lib.demuxer(file).audioStreams().get(0);
+		AudioFormat format = audioStream.properties().format();
+		int length = (int) (5 * format.getSampleRate() * format.getSampleSizeInBits() / 8);
+		byte[] buffer = new byte[length + 4096];
+		IAudioFrame frame;
+		int offset = 0;
+		while ((frame = audioStream.nextFrame())!=null) {
+			byte[] chunk = frame.samples();
+			System.err.println(" == receiving " + chunk.length/2 + " bytes at offset " + offset/2);
+			System.arraycopy(chunk, 0, buffer, offset, chunk.length);
+			offset += chunk.length;
+		}
+		// Assertions.assertEquals(length, offset);
+		System.err.println("Audio length: " + offset + "  (diff=" + (offset-length) + ")");
+		return Arrays.copyOf(buffer, 220500);
+	}
+
+	protected static File local(String url, String localname) {
+		String home = System.getProperty("user.home");
+		File file = Paths.get(home, ".velvet-video", "test", localname).toFile();
+		file.getParentFile().mkdirs();
+		if (!file.exists()) {
+			try (InputStream in = new URL(url).openStream()) {
+				Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return file;
+ 	}
 }

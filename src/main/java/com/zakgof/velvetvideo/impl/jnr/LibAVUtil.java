@@ -49,6 +49,7 @@ public interface LibAVUtil {
 	long av_frame_get_pkt_duration(AVFrame frame);
 
 	void av_samples_alloc(Pointer[] buffer, int[] linesize, int nb_channels, int nb_samples, AVSampleFormat sample_fmt, int align);
+	void av_freep(Pointer[] buffer);
 
 	@int64_t int av_get_default_channel_layout(int targetChannels);
 
@@ -94,6 +95,7 @@ public interface LibAVUtil {
         }
         return code;
 	}
+
 
 
 

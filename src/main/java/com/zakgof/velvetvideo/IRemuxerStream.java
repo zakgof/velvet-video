@@ -1,5 +1,5 @@
 package com.zakgof.velvetvideo;
 
-public interface IRemuxerVideoStream {
+public interface IRemuxerStream {
 	void writeRaw(byte[] packetData);
 }

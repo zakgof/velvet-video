@@ -10,6 +10,6 @@ public interface IFrameHolder {
 
 	AVFrame frame();
 
-	IDecodedPacket decode(AbstractDecoderStream stream);
+	IDecodedPacket decode(AVFrame frame, AbstractDecoderStream stream);
 
 }

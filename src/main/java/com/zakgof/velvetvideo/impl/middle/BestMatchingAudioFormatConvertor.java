@@ -14,10 +14,18 @@ import com.zakgof.tools.generic.MinFinder;
 
 public class BestMatchingAudioFormatConvertor implements Function<AudioFormat, AudioFormat> {
 
+	private final Collection<AudioFormat> supportedFormats;
+
+	public BestMatchingAudioFormatConvertor() {
+		this(getSupportedFormats());
+	}
+
+	public BestMatchingAudioFormatConvertor(Collection<AudioFormat> supportedFormats) {
+		this.supportedFormats = supportedFormats;
+	}
+
 	@Override
 	public AudioFormat apply(AudioFormat suggested) {
-
-		Collection<AudioFormat> supportedFormats = getSupportedFormats();
 		AudioFormat bestFormat = MinFinder.find(supportedFormats, format -> compare(suggested, format)).get();
 		if (bestFormat != null) {
 			return new AudioFormat(bestFormat.getEncoding(), suggested.getSampleRate(), bestFormat.getSampleSizeInBits(), bestFormat.getChannels(), bestFormat.getFrameSize(), suggested.getSampleRate(), bestFormat.isBigEndian());
@@ -54,7 +62,7 @@ public class BestMatchingAudioFormatConvertor implements Function<AudioFormat, A
 		return metric;
 	}
 
-	private Collection<AudioFormat> getSupportedFormats() {
+	private static Collection<AudioFormat> getSupportedFormats() {
 		return Arrays.stream(AudioSystem.getMixerInfo())
 		    .map(AudioSystem::getMixer)
 		    .map(Mixer::getTargetLineInfo)

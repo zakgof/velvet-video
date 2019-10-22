@@ -6,9 +6,11 @@ public interface IMuxerBuilder {
 
 	IMuxerBuilder videoEncoder(IVideoEncoderBuilder encoderBuilder);
 
-	IMuxerBuilder videoRemuxer(IVideoRemuxerBuilder decoder);
+	IMuxerBuilder audioEncoder(IAudioEncoderBuilder encoderBuilder);
 
-	IMuxerBuilder videoRemuxer(IDecoderVideoStream decoder);
+	IMuxerBuilder remuxer(IRemuxerBuilder decoder);
+
+	IMuxerBuilder remuxer(IDecoderStream<?, ?, ?> decoder);
 
 	IMuxerBuilder metadata(String key, String value);
 

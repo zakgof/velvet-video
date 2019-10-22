@@ -43,7 +43,7 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 		AVFrame f = libavutil.av_frame_alloc();
 		f.width.set(width);
 		f.height.set(height);
-		f.pix_fmt.set(format);
+		f.format.set(format.ordinal());
 		libavutil.checkcode(libavutil.av_frame_get_buffer(f, 0));
 		return f;
 	}
@@ -55,10 +55,6 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 				libswscale.sws_scale(scaleCtx, JNRHelper.ptr(biframe.data[0]), JNRHelper.ptr(biframe.linesize[0]), 0,
 						height, JNRHelper.ptr(frame.data[0]), JNRHelper.ptr(frame.linesize[0])));
 		return frame;
-	}
-
-	public BufferedImage getPixels() {
-		return getPixels(frame);
 	}
 
 	public BufferedImage getPixels(AVFrame f) {
@@ -87,8 +83,8 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 	}
 
 	@Override
-	public IDecodedPacket decode(DemuxerImpl.AbstractDecoderStream stream) {
-		return new DecodedVideoPacket(frameOf(getPixels(), stream));
+	public IDecodedPacket decode(AVFrame frame, DemuxerImpl.AbstractDecoderStream stream) {
+		return new DecodedVideoPacket(frameOf(getPixels(frame), stream));
 	}
 
 	@Override
