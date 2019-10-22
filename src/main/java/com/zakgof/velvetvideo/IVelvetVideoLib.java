@@ -10,7 +10,7 @@ import javax.sound.sampled.AudioFormat;
 
 public interface IVelvetVideoLib {
 
-	List<String> codecs(Direction dir);
+	List<String> codecs(Direction dir, MediaType mediaType);
 
 	IVideoEncoderBuilder videoEncoder(String codec);
 

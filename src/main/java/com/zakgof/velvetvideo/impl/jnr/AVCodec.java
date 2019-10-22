@@ -26,4 +26,9 @@ public class AVCodec extends Struct {
     public Pointer pix_fmts = new Pointer();
     public Pointer supported_samplerates = new Pointer();
     public Pointer sample_fmts = new Pointer();
+
+    @Override
+    public java.lang.String toString() {
+    	return name.get() + "/" + long_name.get() + " type=" + type.get();
+    }
 }

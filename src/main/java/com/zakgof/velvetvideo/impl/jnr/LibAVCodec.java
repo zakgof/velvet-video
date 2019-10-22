@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.zakgof.velvetvideo.Direction;
+import com.zakgof.velvetvideo.MediaType;
 
 import jnr.ffi.Pointer;
 import jnr.ffi.annotations.In;
@@ -11,6 +12,12 @@ import jnr.ffi.annotations.Out;
 import jnr.ffi.byref.PointerByReference;
 
 public interface LibAVCodec {
+
+    static final int AVMEDIA_TYPE_VIDEO = 0;
+    static final int AVMEDIA_TYPE_AUDIO = 1;
+    static final int AVMEDIA_TYPE_DATA = 2;
+    static final int AVMEDIA_TYPE_SUBTITLE = 3;
+
 	AVCodec avcodec_find_encoder_by_name(String name);
 
 	AVPacket av_packet_alloc();
@@ -67,19 +74,26 @@ public interface LibAVCodec {
 
 	int avcodec_close(AVCodecContext context);
 
-	default List<String> codecs(Direction dir) {
+	default List<String> codecs(Direction dir, MediaType mediaType) {
 		PointerByReference ptr = new PointerByReference();
 		AVCodec codec;
 		List<String> codecs = new ArrayList<>();
 		while ((codec = av_codec_iterate(ptr)) != null) {
-			if (matches(codec, dir)) {
+			if (matches(codec, dir, mediaType)) {
 				codecs.add(codec.name.get());
 			}
 		}
 		return codecs;
 	}
 
-	default boolean matches(AVCodec codec, Direction dir) {
+	// TODO: looks like shit
+	default boolean matches(AVCodec codec, Direction dir, MediaType mediaType) {
+		switch(mediaType) {
+			case Video: if (codec.type.get() != AVMEDIA_TYPE_VIDEO) return false; break;
+			case Audio: if (codec.type.get() != AVMEDIA_TYPE_AUDIO) return false; break;
+			case Subtitles: if (codec.type.get() != AVMEDIA_TYPE_SUBTITLE) return false; break;
+		}
+
 		switch (dir) {
 		case Decode:
 			return av_codec_is_decoder(codec) != 0;

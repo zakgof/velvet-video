@@ -48,6 +48,7 @@ import com.zakgof.velvetvideo.IVelvetVideoLib;
 import com.zakgof.velvetvideo.IVideoEncoderBuilder;
 import com.zakgof.velvetvideo.IVideoFrame;
 import com.zakgof.velvetvideo.IVideoStreamProperties;
+import com.zakgof.velvetvideo.MediaType;
 import com.zakgof.velvetvideo.VelvetVideoException;
 import com.zakgof.velvetvideo.impl.jnr.AVCodec;
 import com.zakgof.velvetvideo.impl.jnr.AVCodecContext;
@@ -86,16 +87,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private static final int CODEC_FLAG_GLOBAL_HEADER  = 1 << 22;
 
-    private static final int AVMEDIA_TYPE_VIDEO = 0;
-    private static final int AVMEDIA_TYPE_AUDIO = 1;
-
-
     private static final int  AVSEEK_FLAG_BACKWARD =1; ///< seek backward
     private static final int  AVSEEK_FLAG_BYTE     =2; ///< seeking based on position in bytes
     private static final int  AVSEEK_FLAG_ANY      =4; ///< seek to any frame, even non-keyframes
     private static final int  AVSEEK_FLAG_FRAME    =8;
-
-
 
     public static final int AVERROR_EOF = -541478725;
     public static final int AVERROR_EAGAIN = -11;
@@ -112,8 +107,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     }
 
     @Override
-    public List<String> codecs(Direction dir) {
-    	return libavcodec.codecs(dir);
+    public List<String> codecs(Direction dir, MediaType mediaType) {
+    	return libavcodec.codecs(dir, mediaType);
     }
 
     @Override
@@ -714,12 +709,12 @@ public class VelvetVideoLib implements IVelvetVideoLib {
                 Pointer mem = pointer.getPointer(i * pointer.getRuntime().addressSize());
                 AVStream avstream = JNRHelper.struct(AVStream.class, mem);
                 int mediaType = avstream.codec.get().codec_type.get();
-				if (mediaType == AVMEDIA_TYPE_VIDEO) {
+				if (mediaType == LibAVCodec.AVMEDIA_TYPE_VIDEO) {
                     avstream.codec.get().strict_std_compliance.set(-2);
                     DecoderVideoStreamImpl decoder = new DecoderVideoStreamImpl(avstream, defaultName(avstream, i));
                     indexToVideoStream.put(i, decoder);
                     allStreams.add(decoder);
-                } else if (mediaType == AVMEDIA_TYPE_AUDIO) { // TODO dry
+                } else if (mediaType == LibAVCodec.AVMEDIA_TYPE_AUDIO) { // TODO dry
                     avstream.codec.get().strict_std_compliance.set(-2);
                     DecoderAudioStreamImpl decoder = new DecoderAudioStreamImpl(avstream, defaultName(avstream, i));
                     indexToAudioStream.put(i, decoder);

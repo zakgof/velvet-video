@@ -35,6 +35,8 @@ public class AudioTest extends VelvetVideoTest {
          "matroska,       libvorbis",
          "mp4,            libvorbis",
          "webm,           libvorbis",
+  //     "ogg,            vorbis", 2 channels only
+  //     "ogg,            opus",   22050 Hz not supported
   //     "matroska,       aac",     8% mismatch
          "mp4,            aac",
          "flac,           flac",
