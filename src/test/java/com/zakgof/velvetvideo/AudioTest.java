@@ -42,6 +42,12 @@ public class AudioTest extends VelvetVideoTest {
          "flac,           flac",
   //     "mp4,            flac",   experimental support
          "matroska,       flac",
+         "mp3,            libmp3lame",
+//         "matroska,       libmp3lame",  10% mismatch ?
+//         "ogg,            libopus", 22050 Hz not supported
+//         "matroska,       libopus",
+//         "webm,           libopus",
+//         "mp4,            libopus",
     })
 	public void testAudioRecodeTest(String format, String codec) throws Exception {
 		File src = local("http://www.ee.columbia.edu/~dpwe/sounds/musp/msmn1.wav", "msmn1.wav");
