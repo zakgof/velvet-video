@@ -114,10 +114,11 @@ public class VelvetVideoTest {
 		Assertions.assertEquals(im1.getWidth(), im2.getWidth());
 		Assertions.assertEquals(im1.getHeight(), im2.getHeight());
 		double diff = diff(im1, im2);
-		if (Math.abs(diff) > tolerance) {
+		double abs = Math.abs(diff);
+		if (abs > tolerance) {
 			saveImage(im1, file("im1.png"));
 			saveImage(im2, file("im2.png"));
-			Assertions.fail("images differ");
+			Assertions.fail("images differ by " + abs);
 		}
 	}
 

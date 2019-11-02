@@ -1,10 +1,12 @@
 # velvet-video
-Java library for encoding/decoding/muxing/demuxing video
+Java library for encoding/decoding/muxing/demuxing video and audio
 
+With velvet-video it's easy to:
 - create video from still images
 - extract frames from a video
-- remux video from one format to another
-- transcode (recompress) videos using another codec
+- extract audio tracks from video files
+- remux video or audio from one format to another
+- transcode (recompress) videos/audios using another codec
 - change video timing (slo-mo, timelapse etc)
 - merge videos or split them to segments
 - apply filters of transformations (before encoding or after decoding)
@@ -21,6 +23,8 @@ Extracting and loading native libs is fully covered by velvet-video.
 Supported platforms:    
  - Windows 64 bit
  - Linux 64 bit
+ 
+Please contact me if you need support for a platform not listed here. 
 
 ## Setup
 
@@ -40,8 +44,8 @@ The choice for native package is:
 ### gradle
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video:0.2.0'
-    compile 'com.github.zakgof:velvet-video-natives:0.2.0.full'
+    compile 'com.github.zakgof:velvet-video:0.3.0'
+    compile 'com.github.zakgof:velvet-video-natives:0.2.1.full'
 }
 ````
 ### maven
@@ -49,13 +53,13 @@ dependencies {
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video</artifactId>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <type>pom</type>
 </dependency>
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video-natives</artifactId>
-  <version>0.2.0.full</version>
+  <version>0.2.1.full</version>
   <type>pom</type>
 </dependency>
 ````
