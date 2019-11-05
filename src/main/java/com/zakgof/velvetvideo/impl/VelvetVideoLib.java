@@ -98,9 +98,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     // private static final Logger ffmpegLogger = LoggerFactory.getLogger("velvet-video.ffmpeg");
 
-    private final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil-56");
-    private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec-58");
-    private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat-58");
+    private final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil", 56);
+    private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec", 58);
+    private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
 
     private int checkcode(int code) {
     	return libavutil.checkcode(code);
@@ -563,7 +563,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
         private MuxerImpl(ISeekableOutput output, MuxerBuilderImpl builder) {
 
-            this.libavformat = JNRHelper.load(LibAVFormat.class, "avformat-58");
+            this.libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
             this.output = output;
             this.formatCtx = createMuxerFormatContext(builder.format, builder.metadata);
             this.callback = new IOCallback();

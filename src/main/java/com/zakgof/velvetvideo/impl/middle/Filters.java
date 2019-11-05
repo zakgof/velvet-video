@@ -21,8 +21,8 @@ import jnr.ffi.provider.jffi.NativeRuntime;
 
 public class Filters implements AutoCloseable {
 
-		private final static LibAVFilter libavfilter = JNRHelper.load(LibAVFilter.class, "avfilter-7");
-		private static final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil-56");
+		private final static LibAVFilter libavfilter = JNRHelper.load(LibAVFilter.class, "avfilter", 7);
+		private static final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil", 56);
 
 		private final Logger logFilter = LoggerFactory.getLogger("velvet-video.filter");
 

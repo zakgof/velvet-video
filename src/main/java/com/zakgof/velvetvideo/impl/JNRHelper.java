@@ -68,12 +68,13 @@ public class JNRHelper {
 		return dir;
 	}
 
-	public static <L> L load(Class<L> clazz, String libName) {
+	public static <L> L load(Class<L> clazz, String libShortName, int libVersion) {
 
         try {
 
         	Platform nativePlatform = Platform.getNativePlatform();
-            String libfile = nativePlatform.mapLibraryName(libName);
+            String libName = libVersionAndName(libShortName, libVersion);
+			String libfile = nativePlatform.mapLibraryName(libName);
         	String folder = "velvet-video-natives/" + PLATFORM + "/";
 			String path = folder + libfile;
 			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
@@ -105,6 +106,15 @@ public class JNRHelper {
             throw new VelvetVideoException("Error loading native libraries. Make sure that velvet-video-natives in on classpath");
         }
     }
+
+	private static String libVersionAndName(String libName, int libVersion) {
+		if (PLATFORM.startsWith("linux")) {
+			return libName;
+		} else if (PLATFORM.startsWith("windows")) {
+			return libName + "-" + libVersion;
+		}
+		throw new VelvetVideoException("Unsupported platform: " + PLATFORM);
+	}
 
 	private static File locationFor(URL url) {
 		try {

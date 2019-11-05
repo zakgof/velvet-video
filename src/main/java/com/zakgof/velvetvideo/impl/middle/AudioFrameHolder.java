@@ -26,8 +26,8 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 	private AudioFormat userFormat;
 	private AVSampleFormat userSampleFormat;
 
-	private static final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil-56");
-	private static final LibSwResample libavresample = JNRHelper.load(LibSwResample.class, "swresample-3");
+	private static final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil", 56);
+	private static final LibSwResample libavresample = JNRHelper.load(LibSwResample.class, "swresample", 3);
 	private Pointer[] userBuffer;
 	private int userBufferSamplesSize;
 	private int frameSamples;
