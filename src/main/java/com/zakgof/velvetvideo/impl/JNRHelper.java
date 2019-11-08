@@ -29,7 +29,7 @@ import jnr.ffi.provider.ParameterFlags;
 
 public class JNRHelper {
 
-	private static String MIN_NATIVE_VERSION = "0.2.1";
+	private static String MIN_NATIVE_VERSION = "0.2.6";
 
 	private static Logger LOG = LoggerFactory.getLogger("velvet-video");
     private static String PLATFORM = getPlatform();
@@ -71,20 +71,23 @@ public class JNRHelper {
 	public static <L> L load(Class<L> clazz, String libShortName, int libVersion) {
 
         try {
-
+        	LOG.atDebug().addArgument(libShortName).addArgument(libVersion).log("Loading native lib {} ver {}");
         	Platform nativePlatform = Platform.getNativePlatform();
             String libName = libVersionAndName(libShortName, libVersion);
 			String libfile = nativePlatform.mapLibraryName(libName);
         	String folder = "velvet-video-natives/" + PLATFORM + "/";
 			String path = folder + libfile;
 			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
+			LOG.atDebug().addArgument(resource).log("Checking path: {}");
         	if (resource == null) {
         		throw new VelvetVideoException("Cannot locate native library " + libfile + ". Make sure that velvet-video-natives in on classpath.");
         	}
 			File location = locationFor(resource);
             boolean isJar = location.isFile();
             String libPath = nativePlatform.locateLibrary(libName, Arrays.asList(extractionDir.toString()));
+            LOG.atDebug().addArgument(libPath).log("libPath: {}");
             if (libPath.equals(libfile) && isJar) {
+            	LOG.atDebug().addArgument(libPath).addArgument(libfile).log("libPath= {} libFile={} --> digging into jar");
                 try (ZipFile zif = new ZipFile(location)) {
                     zif.stream().filter(zipEntry -> !zipEntry.isDirectory() && zipEntry.getName().startsWith(folder))
                         .forEach(zipEntry -> {
@@ -109,7 +112,7 @@ public class JNRHelper {
 
 	private static String libVersionAndName(String libName, int libVersion) {
 		if (PLATFORM.startsWith("linux")) {
-			return libName;
+			return libName + ".so." + libVersion;
 		} else if (PLATFORM.startsWith("windows")) {
 			return libName + "-" + libVersion;
 		}
