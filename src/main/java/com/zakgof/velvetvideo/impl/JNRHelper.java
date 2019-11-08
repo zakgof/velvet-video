@@ -78,7 +78,7 @@ public class JNRHelper {
         	String folder = "velvet-video-natives/" + PLATFORM + "/";
 			String path = folder + libfile;
 			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
-			LOG.atDebug().addArgument(resource).log("Checking path: {}");
+			LOG.atDebug().addArgument(path).addArgument(resource).log("Checking path:{} url:{}");
         	if (resource == null) {
         		throw new VelvetVideoException("Cannot locate native library " + libfile + ". Make sure that velvet-video-natives in on classpath.");
         	}
