@@ -46,6 +46,10 @@ test {
     }
 }
 
+testlogger {
+    showStandardStreams true
+}
+
 task fatJar(type: Jar) {
     baseName = 'velvet-video'
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
