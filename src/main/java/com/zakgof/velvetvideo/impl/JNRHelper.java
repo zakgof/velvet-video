@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import com.zakgof.velvetvideo.VelvetVideoException;
 
 import jnr.ffi.LibraryLoader;
+import jnr.ffi.LibraryOption;
 import jnr.ffi.Platform;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
@@ -110,7 +111,7 @@ public class JNRHelper {
                 }
             }
             L lib = LibraryLoader.create(clazz).failImmediately().search(extractionDir.toString()).load(libShortName);
-            LOG.atInfo().addArgument(libfile).log("Loaded {}");
+            LOG.atDebug().addArgument(libfile).log("Loaded {}");
 			return lib;
         } catch(UnsatisfiedLinkError e) {
         	LOG.error("Error loading native library " + libPath, e);
@@ -174,5 +175,13 @@ public class JNRHelper {
         return member.getMemory().slice(member.offset());
     }
 
-
+    // TODO
+	public static int dummyLoad(String libShortName, int libVersion) {
+		try {
+			load(Dummy.class, libShortName, libVersion);
+		} catch (VelvetVideoException e) {
+			LOG.atDebug().addArgument(libShortName).log("Ignored failure loading {}");
+		}
+		return 0;
+	}
 }
