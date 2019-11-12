@@ -30,7 +30,7 @@ dependencies {
     testImplementation 'org.junit.platform:junit-platform-launcher:1.5.2'
     testImplementation 'org.quifft:quifft:0.1.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-api:5.3.1'
-    testRuntimeOnly 'com.github.zakgof:velvet-video-natives:0.2.2.full'
+    testRuntimeOnly 'com.github.zakgof:velvet-video-natives:0.2.6.full'
     testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.0-alpha0'
     
 }
@@ -41,6 +41,13 @@ repositories {
 
 test {
     useJUnitPlatform()
+    options {
+        systemProperties(System.getProperties())
+    }
+}
+
+testlogger {
+    showStandardStreams true
 }
 
 task fatJar(type: Jar) {

@@ -26,8 +26,8 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 	private final int width;
 	private final int height;
 	private AVRational timebase;
-	private static final LibSwScale libswscale = JNRHelper.load(LibSwScale.class, "swscale-5");
-	private static final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil-56");
+	private static final LibSwScale libswscale = JNRHelper.load(LibSwScale.class, "swscale",5);
+	private static final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil", 56);
 
 	public VideoFrameHolder(int width, int height, AVPixelFormat srcFormat, AVPixelFormat destFormat,
 			AVRational timebase, boolean encode) {
@@ -36,7 +36,7 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 		this.frame = alloc(width, height, encode ? destFormat : srcFormat);
 		this.biframe = alloc(width, height, encode ? srcFormat : destFormat);
 		this.timebase = timebase;
-		scaleCtx = libswscale.sws_getContext(width, height, srcFormat, width, height, destFormat, 0, 0, 0, 0);
+		scaleCtx = libswscale.sws_getContext(width, height, srcFormat, width, height, destFormat, 0, null, null, null);
 	}
 
 	public AVFrame alloc(int width, int height, AVPixelFormat format) {

@@ -65,6 +65,7 @@ import com.zakgof.velvetvideo.impl.jnr.LibAVCodec;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFormat;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFormat.ICustomAvioCallback;
 import com.zakgof.velvetvideo.impl.jnr.LibAVUtil;
+import com.zakgof.velvetvideo.impl.jnr.LibSwResample;
 import com.zakgof.velvetvideo.impl.middle.AudioFrameHolder;
 import com.zakgof.velvetvideo.impl.middle.BestMatchingAudioFormatConvertor;
 import com.zakgof.velvetvideo.impl.middle.Feeder;
@@ -98,9 +99,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     // private static final Logger ffmpegLogger = LoggerFactory.getLogger("velvet-video.ffmpeg");
 
-    private final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil-56");
-    private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec-58");
-    private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat-58");
+    private final LibAVUtil libavutil = JNRHelper.load(LibAVUtil.class, "avutil", 56);
+    @SuppressWarnings("unused")
+	private final LibSwResample dummyswresample = JNRHelper.load(LibSwResample.class, "swresample", 3);
+	@SuppressWarnings("unused")
+	private final int dummyopenh264 = JNRHelper.dummyLoad("openh264", 5);
+	
+    private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec", 58);
+    private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
 
     private int checkcode(int code) {
     	return libavutil.checkcode(code);
@@ -563,7 +569,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
         private MuxerImpl(ISeekableOutput output, MuxerBuilderImpl builder) {
 
-            this.libavformat = JNRHelper.load(LibAVFormat.class, "avformat-58");
+            this.libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
             this.output = output;
             this.formatCtx = createMuxerFormatContext(builder.format, builder.metadata);
             this.callback = new IOCallback();

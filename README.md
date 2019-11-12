@@ -53,13 +53,13 @@ dependencies {
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video</artifactId>
-  <version>0.3.0</version>
+  <version>0.3.2</version>
   <type>pom</type>
 </dependency>
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video-natives</artifactId>
-  <version>0.2.1.full</version>
+  <version>0.2.6.full</version>
   <type>pom</type>
 </dependency>
 ````
