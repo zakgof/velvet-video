@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import com.zakgof.velvetvideo.VelvetVideoException;
 
 import jnr.ffi.LibraryLoader;
-import jnr.ffi.LibraryOption;
 import jnr.ffi.Platform;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
@@ -76,39 +75,12 @@ public class JNRHelper {
         	LOG.atDebug().addArgument(libShortName).addArgument(libVersion).log("Requesting loading native lib {}.{}");
         	Platform nativePlatform = Platform.getNativePlatform();
             String libfile = libVersionAndName(libShortName, libVersion);
+            libShortName = fixShortName(libShortName, libVersion);
 
             libPath = nativePlatform.locateLibrary(libShortName, Arrays.asList(extractionDir.toString()));
             LOG.atDebug().addArgument(libfile).addArgument(extractionDir).log("Checking native lib {} at {}");
             if (!new File(libPath).isAbsolute()) {
-            	// lib not found at extraction location
-            	LOG.atDebug().log("lib not found, extracting");
-            	String folder = "velvet-video-natives/" + PLATFORM + "/";
-    			String path = folder + libfile;
-    			URL resource = Thread.currentThread().getContextClassLoader().getResource(path);
-    			LOG.atDebug().addArgument(path).addArgument(resource).log("Resolving classpath {} --> {}");
-            	if (resource == null) {
-            		throw new VelvetVideoException("Cannot locate native library " + libfile + ". Make sure that velvet-video-natives in on classpath.");
-            	}
-    			File location = locationFor(resource);
-                boolean isJar = location.isFile();
-                if (isJar) {
-	                try (ZipFile zif = new ZipFile(location)) {
-	                    zif.stream().filter(zipEntry -> !zipEntry.isDirectory() && zipEntry.getName().startsWith(folder))
-	                        .forEach(zipEntry -> {
-	                            String rawfilename = zipEntry.getName().split("/")[2];
-	                            LOG.info("Extracting " + zipEntry + " to " + new File(extractionDir, rawfilename));
-	                            try (InputStream inputStream = zif.getInputStream(zipEntry)) {
-	                                FileUtils.copyInputStreamToFile(inputStream, new File(extractionDir, rawfilename));
-	                            } catch (IOException e) {
-	                                throw new VelvetVideoException("Error extracting ffmpeg native libraries");
-	                            }
-	                        });
-	                } catch (IOException e) {
-	                    throw new VelvetVideoException("Error extracting ffmpeg native libraries");
-	                }
-                } else {
-                	throw new VelvetVideoException("Loading velvet-video-natives from jar only is supported");
-                }
+            	extractNatives();
             }
             L lib = LibraryLoader.create(clazz).failImmediately().search(extractionDir.toString()).load(libShortName);
             LOG.atDebug().addArgument(libfile).log("Loaded {}");
@@ -118,6 +90,45 @@ public class JNRHelper {
             throw new VelvetVideoException("Error loading native library " + libPath, e);
         }
     }
+
+	private static void extractNatives() {
+		LOG.atInfo().log("Extracting native libraries");
+		String folder = "velvet-video-natives/" + PLATFORM + "/";
+		URL resource = Thread.currentThread().getContextClassLoader().getResource(folder);
+		LOG.atDebug().addArgument(folder).addArgument(resource).log("Resolving classpath {} --> {}");
+		if (resource == null) {
+			throw new VelvetVideoException("Cannot locate native libraries resource " + folder + ". Make sure that velvet-video-natives in on classpath.");
+		}
+		File location = locationFor(resource);
+		boolean isJar = location.isFile();
+		if (isJar) {
+		    try (ZipFile zif = new ZipFile(location)) {
+		        zif.stream().filter(zipEntry -> !zipEntry.isDirectory() && zipEntry.getName().startsWith(folder))
+		            .forEach(zipEntry -> {
+		                String rawfilename = zipEntry.getName().split("/")[2];
+		                File destFile = new File(extractionDir, rawfilename);
+		                LOG.atInfo().addArgument(zipEntry).addArgument(destFile.toString())
+		                	.log("Extracting {} --> {}");
+		                try (InputStream inputStream = zif.getInputStream(zipEntry)) {
+		                    FileUtils.copyInputStreamToFile(inputStream, destFile);
+		                } catch (IOException e) {
+		                    throw new VelvetVideoException("Error extracting ffmpeg native libraries", e);
+		                }
+		            });
+		    } catch (IOException e) {
+		        throw new VelvetVideoException("Error extracting ffmpeg native libraries", e);
+		    }
+		} else {
+			throw new VelvetVideoException("Loading velvet-video-natives from jar only is supported");
+		}
+	}
+
+	private static String fixShortName(String libShortName, int libVersion) {
+		if (PLATFORM.startsWith("windows")) {
+			return libShortName + "-" + libVersion;
+		}
+		return libShortName;
+	}
 
 	private static String libVersionAndName(String libName, int libVersion) {
 		if (PLATFORM.startsWith("linux")) {
@@ -175,12 +186,25 @@ public class JNRHelper {
         return member.getMemory().slice(member.offset());
     }
 
-    // TODO
-	public static int dummyLoad(String libShortName, int libVersion) {
+	// TODO
+	public static int preload(String libShortName, int libVersion) {
+		File[] files = extractionDir.listFiles();
+		if (files == null || files.length == 0) {
+			extractNatives();
+		}
+		String libfile = libVersionAndName(libShortName, libVersion);
+		File nativeLib = new File(extractionDir, libfile);
+		String nativeLibPath = nativeLib.toString();
+		if (!nativeLib.exists()) {
+			LOG.atDebug().addArgument(nativeLibPath).log("Skipping non-existing native lib dependendcy file: {}");
+			return -1;
+		}
+		LOG.atDebug().addArgument(nativeLibPath).log("Preloading native lib dependendcy: {}");
 		try {
-			load(Dummy.class, libShortName, libVersion);
-		} catch (VelvetVideoException e) {
-			LOG.atDebug().addArgument(libShortName).log("Ignored failure loading {}");
+			System.load(nativeLibPath);
+		} catch (LinkageError e) {
+			LOG.atError().addArgument(nativeLibPath).addArgument(e.getMessage())
+					.log("Error preloading native lib dependency {} : {}");
 		}
 		return 0;
 	}

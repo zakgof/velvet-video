@@ -103,7 +103,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     @SuppressWarnings("unused")
 	private final LibSwResample dummyswresample = JNRHelper.load(LibSwResample.class, "swresample", 3);
 	@SuppressWarnings("unused")
-	private final int dummyopenh264 = JNRHelper.dummyLoad("openh264", 5);
+	private final int dummyopenh264 = JNRHelper.preload("openh264", 5);
 	
     private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec", 58);
     private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
