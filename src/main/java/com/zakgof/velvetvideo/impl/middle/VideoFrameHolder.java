@@ -36,7 +36,7 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 		this.frame = alloc(width, height, encode ? destFormat : srcFormat);
 		this.biframe = alloc(width, height, encode ? srcFormat : destFormat);
 		this.timebase = timebase;
-		scaleCtx = libswscale.sws_getContext(width, height, srcFormat, width, height, destFormat, 0, 0, 0, 0);
+		scaleCtx = libswscale.sws_getContext(width, height, srcFormat, width, height, destFormat, 0, null, null, null);
 	}
 
 	public AVFrame alloc(int width, int height, AVPixelFormat format) {
