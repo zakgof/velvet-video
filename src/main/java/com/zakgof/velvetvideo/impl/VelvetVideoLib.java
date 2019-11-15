@@ -86,7 +86,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private static final int AVIO_CUSTOM_BUFFER_SIZE = 32768;
 
-    private static final int CODEC_FLAG_GLOBAL_HEADER  = 1 << 22;
+
 
     private static final int  AVSEEK_FLAG_BACKWARD =1; ///< seek backward
     private static final int  AVSEEK_FLAG_BYTE     =2; ///< seeking based on position in bytes
@@ -104,7 +104,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 	private final LibSwResample dummyswresample = JNRHelper.load(LibSwResample.class, "swresample", 3);
 	@SuppressWarnings("unused")
 	private final int dummyopenh264 = JNRHelper.preload("openh264", 5);
-	
+
     private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec", 58);
     private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
 
@@ -209,6 +209,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			DemuxerImpl.DecoderVideoStreamImpl decoderImpl = (DemuxerImpl.DecoderVideoStreamImpl) builder.decoder;
 			checkcode(libavcodec.avcodec_parameters_copy(stream.codecpar.get(), decoderImpl.avstream.codecpar.get()));
         	stream.codecpar.get().codec_tag.set(0);
+        	AVCodecContext codecCtx = stream.codec.get();
+        	if ((formatCtx.oformat.get().flags.get() & LibAVFormat.AVFMT_GLOBALHEADER) != 0) {
+				codecCtx.flags.set(codecCtx.flags.get() | LibAVCodec.CODEC_FLAG_GLOBAL_HEADER);
+            }
         	int timeBaseNum = builder.timebaseNum == null ? decoderImpl.codecCtx.time_base.num.get() * decoderImpl.codecCtx.ticks_per_frame.get(): builder.timebaseNum;
         	int timeBaseDen = builder.timebaseDen == null ? decoderImpl.codecCtx.time_base.den.get() : builder.timebaseDen;
         	stream.time_base.num.set(timeBaseNum);
@@ -236,7 +240,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private abstract class AbstractEncoderStreamImpl<B extends AbstractEncoderBuilderImpl<?>> extends AbstractMuxerStreamImpl {
 
-        protected final AVCodecContext codecCtx;
+
+
+		protected final AVCodecContext codecCtx;
 
         protected final AVCodec codec;
         protected final Pointer[] codecOpts;
@@ -256,9 +262,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             this.stream = libavformat.avformat_new_stream(formatCtx, codec);
 
             this.codecCtx = libavcodec.avcodec_alloc_context3(codec);
-            if ((formatCtx.ctx_flags.get() & LibAVFormat.AVFMT_GLOBALHEADER) != 0) {
-            	codecCtx.flags.set(codecCtx.flags.get() | CODEC_FLAG_GLOBAL_HEADER);
-            }
+            if ((formatCtx.oformat.get().flags.get() & LibAVFormat.AVFMT_GLOBALHEADER) != 0) {
+            	codecCtx.flags.set(codecCtx.flags.get() | LibAVCodec.CODEC_FLAG_GLOBAL_HEADER);
+         	}
             codecCtx.codec_id.set(codec.id.get());
             codecCtx.codec_type.set(codec.type.get());
             codecCtx.bit_rate.set(builder.bitrate == null ? 400000 : builder.bitrate);
@@ -388,8 +394,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             if (!this.codecOpened) {
             	codecCtx.width.set(width);
                 codecCtx.height.set(height);
-                checkcode(libavcodec.avcodec_parameters_from_context(stream.codecpar.get(), codecCtx));
                 checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), codecOpts));
+                checkcode(libavcodec.avcodec_parameters_from_context(stream.codecpar.get(), codecCtx));
                 codecOpened = true;
                 if (filterString != null)
                 	this.filters = new Filters(codecCtx, filterString);
