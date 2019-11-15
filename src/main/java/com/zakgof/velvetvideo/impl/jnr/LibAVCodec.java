@@ -18,6 +18,8 @@ public interface LibAVCodec {
     static final int AVMEDIA_TYPE_DATA = 2;
     static final int AVMEDIA_TYPE_SUBTITLE = 3;
 
+    public static final int CODEC_FLAG_GLOBAL_HEADER  = 1 << 22;
+
 	AVCodec avcodec_find_encoder_by_name(String name);
 
 	AVPacket av_packet_alloc();

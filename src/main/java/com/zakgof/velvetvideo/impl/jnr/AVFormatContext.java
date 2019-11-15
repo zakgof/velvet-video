@@ -11,7 +11,7 @@ public class AVFormatContext extends Struct {
 
     Pointer av_class = new Pointer();
     public StructRef<AVInputFormat> iformat = new StructRef<>(AVInputFormat.class);
-    StructRef<AVOutputFormat> oformat = new StructRef<>(AVOutputFormat.class);
+    public StructRef<AVOutputFormat> oformat = new StructRef<>(AVOutputFormat.class);
     Pointer priv_data = new Pointer();
 
     /**
