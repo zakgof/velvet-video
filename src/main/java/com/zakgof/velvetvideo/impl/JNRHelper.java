@@ -10,6 +10,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.zip.ZipFile;
 
@@ -29,11 +31,13 @@ import jnr.ffi.provider.ParameterFlags;
 
 public class JNRHelper {
 
-	private static String MIN_NATIVE_VERSION = "0.2.6";
+	private static final String MIN_NATIVE_VERSION = "0.2.6";
 
-	private static Logger LOG = LoggerFactory.getLogger("velvet-video");
-    private static String PLATFORM = getPlatform();
-    private static File extractionDir = initializeExtractionDirectory();
+	private static final Logger LOG = LoggerFactory.getLogger("velvet-video");
+    private static final String PLATFORM = getPlatform();
+    private static final File extractionDir = initializeExtractionDirectory();
+
+    private static final Map<Class<?>, Object> libCache = new HashMap<>();
 
     private static File initializeExtractionDirectory() {
     	String path = "velvet-video-natives/version.inf";
@@ -69,7 +73,12 @@ public class JNRHelper {
 		return dir;
 	}
 
+	@SuppressWarnings("unchecked")
 	public static <L> L load(Class<L> clazz, String libShortName, int libVersion) {
+		return clazz.cast(libCache.computeIfAbsent(clazz, (Class<?> cl) -> JNRHelper.forceLoad((Class<L>)cl, libShortName, libVersion)));
+	}
+
+	private static <L> L forceLoad(Class<L> clazz, String libShortName, int libVersion) {
 		String libPath = null;
         try {
         	LOG.atDebug().addArgument(libShortName).addArgument(libVersion).log("Requesting loading native lib {}.{}");

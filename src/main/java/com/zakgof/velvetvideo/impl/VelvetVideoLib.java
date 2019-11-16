@@ -104,7 +104,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 	private final LibSwResample dummyswresample = JNRHelper.load(LibSwResample.class, "swresample", 3);
 	@SuppressWarnings("unused")
 	private final int dummyopenh264 = JNRHelper.preload("openh264", 5);
-	
+
     private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec", 58);
     private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
 
@@ -144,11 +144,11 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     }
 
     private void initCustomAvio(boolean read, AVFormatContext formatCtx, ICustomAvioCallback callback) {
-        Pointer buffer = libavutil.av_malloc(AVIO_CUSTOM_BUFFER_SIZE + 64); // TODO free buffer
+        Pointer buffer = libavutil.av_malloc(AVIO_CUSTOM_BUFFER_SIZE + 64);
         AVIOContext avioCtx = libavformat.avio_alloc_context(buffer, AVIO_CUSTOM_BUFFER_SIZE, read ? 0 : 1, null, read ? callback : null, read ? null : callback, callback);
         int flagz = formatCtx.ctx_flags.get();
         formatCtx.ctx_flags.set(LibAVFormat.AVFMT_FLAG_CUSTOM_IO | flagz);
-        formatCtx.pb.set(avioCtx); // TODO free avioCtx and buffer
+        formatCtx.pb.set(avioCtx);
     }
 
     private AVFormatContext createMuxerFormatContext(String format, Map<String, String> metadata) {
@@ -159,8 +159,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         PointerByReference ctxptr = new PointerByReference();
         checkcode(libavformat.avformat_alloc_output_context2(ctxptr, outputFmt, null, null));
         AVFormatContext ctx = JNRHelper.struct(AVFormatContext.class, ctxptr.getValue());
-        Pointer[] metadataPtr = libavutil.createDictionary(metadata);
-        ctx.metadata.set(metadataPtr[0]);
+        Pointer dictionary = libavutil.createDictionary(metadata);
+        ctx.metadata.set(dictionary);
         return ctx;
     }
 
@@ -239,7 +239,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         protected final AVCodecContext codecCtx;
 
         protected final AVCodec codec;
-        protected final Pointer[] codecOpts;
+        protected final Pointer codecOpts;
 
 		protected final String filterString;
 		protected Filters filters;
@@ -271,8 +271,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             initCodecCtx(builder);
 
-            Pointer[] metadata = libavutil.createDictionary(builder.metadata);
-            stream.metadata.set(metadata[0]);
+            Pointer dictionary = libavutil.createDictionary(builder.metadata);
+            stream.metadata.set(dictionary);
             checkcode(libavcodec.avcodec_parameters_from_context(stream.codecpar.get(), codecCtx));
 
             stream.time_base.num.set(codecCtx.time_base.num.get());
@@ -303,9 +303,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         	logEncoder.atDebug().log(() -> frame == null ? "stream " + streamIndex + ": flush" :  "stream " + streamIndex + ": send frame for encoding, PTS=" + frame.pts.get() + " duration=" + frameDurationCache.get(frame.pts.get()));
             checkcode(libavcodec.avcodec_send_frame(codecCtx, frame));
             for (;;) {
-                libavcodec.av_init_packet(packet);
-                packet.data.set((Pointer) null);
-                packet.size.set(0);
+//                libavcodec.av_init_packet(packet);
+//				packet.data.set((Pointer) null);
+//				packet.size.set(0);
 
                 int res = libavcodec.avcodec_receive_packet(codecCtx, packet);
                 if (res == AVERROR_EAGAIN || res == AVERROR_EOF)
@@ -328,14 +328,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
                 	.addArgument(() -> packet.size.get())
                 	.log(() -> "encoder: returned packet  PTS/DTS: {}/{}, duration={}, {} bytes");
 
+                Integer dur = frameDurationCache.remove(packet.pts.get());
         		if ((packet.duration.get() == 0 || packet.duration.get() == AVNOPTS_VALUE)) {
-        			Integer dur = frameDurationCache.remove(packet.pts.get());
         			if (dur == null)
         				dur = 1;
         			packet.duration.set(dur * defaultFrameDuration);
     			}
-
                 output.accept(packet);
+                libavcodec.av_packet_unref(packet);
             }
         }
 
@@ -347,6 +347,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		public void close() {
 			submitFrame(null, defaultFrameDuration);
 			super.close();
+			// libavutil.av_dict_free(new Pointer[] {codecOpts});
+			// libavutil.av_dict_free(new Pointer[] {stream.metadata.get()});
 			libavcodec.avcodec_close(codecCtx);
 			libavcodec.avcodec_free_context(new Pointer[] { Struct.getMemory(codecCtx) });
 		}
@@ -389,7 +391,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             	codecCtx.width.set(width);
                 codecCtx.height.set(height);
                 checkcode(libavcodec.avcodec_parameters_from_context(stream.codecpar.get(), codecCtx));
-                checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), codecOpts));
+                checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), new Pointer[] {codecOpts}));
                 codecOpened = true;
                 if (filterString != null)
                 	this.filters = new Filters(codecCtx, filterString);
@@ -409,6 +411,17 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             nextPts += duration * defaultFrameDuration;
             submitFrame(frame, duration);
         }
+
+		@Override
+		public void close() {
+			if (frameHolder != null) {
+            	frameHolder.close();
+            }
+			if (filters != null) {
+				filters.close();
+			}
+			super.close();
+		}
 
     }
 
@@ -438,7 +451,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			codecCtx.sample_fmt.set(AVSampleFormat.from(codecAudioFormat));
 			codecCtx.bit_rate.set(builder.bitrate == null ? 64000 : builder.bitrate); //TODO default audio bit rate ?
 
-			checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), codecOpts));
+			checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), new Pointer[]{codecOpts}));
 		}
 
 		private Set<AudioFormat> getSampleFormats(Pointer sample_fmts) {
@@ -469,6 +482,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		@Override
 		public int frameBytes() {
 			return frameHolder.frameBytes();
+		}
+
+		@Override
+		public void close() {
+			if (frameHolder != null) {
+				frameHolder.close();
+			}
 		}
     }
     @Override
@@ -661,6 +681,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             for (AudioEncoderStreamImpl encoder : audioStreams) {
                 encoder.close();
             }
+            for (RemuxerStreamImpl encoder : remuxerStreams) {
+                encoder.close();
+            }
             // flush muxer
             do {
             	logMuxer.atDebug().log("flushing");
@@ -669,11 +692,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             logMuxer.atDebug().log("writing trailer");
             checkcode(libavformat.av_write_trailer(formatCtx));
             // dispose resources
-            // libavformat.avio_context_free(new PointerByReference(Struct.getMemory(avioCtx)));
+            AVIOContext avio = formatCtx.pb.get();
+            libavutil.av_free(avio.buffer.get());
+            libavformat.avio_context_free(new Pointer[] {Struct.getMemory(avio)});
+            libavutil.av_dict_free(new Pointer[] {formatCtx.metadata.get()});
+            formatCtx.metadata.set((Pointer)null);
             libavformat.avformat_free_context(formatCtx);
             output.close();
         }
-
 
     }
 
@@ -700,7 +726,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             this.packet = libavcodec.av_packet_alloc(); // TODO free
 
-            formatCtx = libavformat.avformat_alloc_context();
+            this.formatCtx = libavformat.avformat_alloc_context();
             this.callback = new IOCallback();
             initCustomAvio(true, formatCtx, callback);
 

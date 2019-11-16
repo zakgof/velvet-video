@@ -18,6 +18,9 @@ import com.zakgof.velvetvideo.impl.jnr.LibAVUtil;
 import com.zakgof.velvetvideo.impl.jnr.LibSwScale;
 import com.zakgof.velvetvideo.impl.jnr.SwsContext;
 
+import jnr.ffi.Pointer;
+import jnr.ffi.Struct;
+
 public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 
 	public final AVFrame frame;
@@ -77,8 +80,8 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 
 	@Override
 	public void close() {
-		libavutil.av_frame_free(new AVFrame[] { frame });
-		libavutil.av_frame_free(new AVFrame[] { biframe });
+		libavutil.av_frame_free(new Pointer[] { Struct.getMemory(frame) });
+		libavutil.av_frame_free(new Pointer[] { Struct.getMemory(biframe) });
 		libswscale.sws_freeContext(scaleCtx);
 	}
 

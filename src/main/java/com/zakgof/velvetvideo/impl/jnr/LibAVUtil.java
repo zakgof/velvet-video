@@ -27,11 +27,14 @@ public interface LibAVUtil {
 
 	int av_frame_get_buffer(AVFrame frame, int align);
 
-	void av_frame_free(AVFrame[] frameref);
+	void av_frame_free(Pointer[] frameref);
 
 	int av_image_alloc(Pointer[] pointers, int[] linesizes, int w, int h, AVPixelFormat pix_fmt, int align);
 
-	int av_dict_set(Pointer[] pm, String key, String value, int flags);
+	int av_dict_set(Pointer[] dictionary, String key, String value, int flags);
+
+	void av_dict_free(Pointer[] dictionary);
+
 
 	void av_opt_set_int(Pointer object, String name, @int64_t int value, int flags);
 
@@ -50,6 +53,7 @@ public interface LibAVUtil {
 
 	void av_samples_alloc(Pointer[] buffer, int[] linesize, int nb_channels, int nb_samples, AVSampleFormat sample_fmt, int align);
 	void av_freep(Pointer[] buffer);
+	void av_free(Pointer buffer);
 
 	@int64_t int av_get_default_channel_layout(int targetChannels);
 
@@ -62,12 +66,12 @@ public interface LibAVUtil {
 
 	Pointer av_strdup(String s);
 
-	default Pointer[] createDictionary(Map<String, String> map) {
+	default Pointer createDictionary(Map<String, String> map) {
 		Pointer[] opts = new Pointer[1];
 		for (Entry<String, String> entry : map.entrySet()) {
 			av_dict_set(opts, entry.getKey(), entry.getValue(), 0);
 		}
-		return opts;
+		return opts[0];
 	}
 
 	default Map<String, String> dictionaryToMap(Pointer dictionary) {
@@ -95,7 +99,6 @@ public interface LibAVUtil {
         }
         return code;
 	}
-
 
 
 

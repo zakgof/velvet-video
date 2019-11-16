@@ -11,6 +11,6 @@ public interface LibSwResample {
 	int swr_convert(Pointer swrContext, Pointer[] out, int out_count, Pointer in, int in_count);
 	int swr_convert(Pointer swrContext, Pointer out, int out_count, Pointer[] in, int in_count);
 
-	void svr_free(Pointer[] pointers);
+	void swr_free(Pointer[] pointers);
 
 }
