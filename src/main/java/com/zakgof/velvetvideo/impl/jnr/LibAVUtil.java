@@ -26,7 +26,7 @@ public interface LibAVUtil {
 	AVFrame av_frame_alloc();
 
 	int av_frame_get_buffer(AVFrame frame, int align);
-
+	void av_frame_unref(AVFrame frame);
 	void av_frame_free(Pointer[] frameref);
 
 	int av_image_alloc(Pointer[] pointers, int[] linesizes, int w, int h, AVPixelFormat pix_fmt, int align);
@@ -99,6 +99,8 @@ public interface LibAVUtil {
         }
         return code;
 	}
+
+
 
 
 
