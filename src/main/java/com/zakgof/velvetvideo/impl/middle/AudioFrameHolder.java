@@ -16,6 +16,7 @@ import com.zakgof.velvetvideo.impl.jnr.LibAVUtil;
 import com.zakgof.velvetvideo.impl.jnr.LibSwResample;
 
 import jnr.ffi.Pointer;
+import jnr.ffi.Struct;
 
 public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 
@@ -109,8 +110,8 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 
     @Override
 	public void close() {
-       libavutil.av_frame_free(new AVFrame[] {frame});
-       libavresample.svr_free(new Pointer[] {swrContext});
+       libavutil.av_frame_free(new Pointer[] {Struct.getMemory(frame)});
+       libavresample.swr_free(new Pointer[] {swrContext});
        if (this.userBuffer != null) {
     	   libavutil.av_freep(userBuffer);
        }

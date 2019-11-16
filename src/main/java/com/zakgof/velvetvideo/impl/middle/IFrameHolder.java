@@ -4,7 +4,7 @@ import com.zakgof.velvetvideo.IDecodedPacket;
 import com.zakgof.velvetvideo.impl.VelvetVideoLib.DemuxerImpl.AbstractDecoderStream;
 import com.zakgof.velvetvideo.impl.jnr.AVFrame;
 
-public interface IFrameHolder {
+public interface IFrameHolder extends AutoCloseable {
 
 	long pts(); // frame.pts.get();
 
@@ -12,4 +12,6 @@ public interface IFrameHolder {
 
 	IDecodedPacket decode(AVFrame frame, AbstractDecoderStream stream);
 
+	@Override
+	void close();
 }
