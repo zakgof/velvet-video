@@ -43,6 +43,7 @@ public class FullEncodeDecodeTest extends GenericEncodeDecodeTest {
 
          "libx265,      mp4",
          "libx265,      matroska",
+
          "wmv1,         avi",
      //  "wmv2,         avi", // FAIL: restored frame mismatch (!)
          "mjpeg,        avi",
