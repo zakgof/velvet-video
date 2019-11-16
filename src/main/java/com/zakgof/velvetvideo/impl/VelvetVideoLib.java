@@ -211,7 +211,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			checkcode(libavcodec.avcodec_parameters_copy(stream.codecpar.get(), decoderImpl.avstream.codecpar.get()));
         	stream.codecpar.get().codec_tag.set(0);
         	AVCodecContext codecCtx = stream.codec.get();
-        	if ((formatCtx.oformat.get().flags.get() & LibAVFormat.AVFMT_GLOBALHEADER) != 0 && !codecCtx.codec.get().name.get().equals("libx265")) {
+        	if ((formatCtx.oformat.get().flags.get() & LibAVFormat.AVFMT_GLOBALHEADER) != 0 && decoderImpl.avstream.codecpar.get().codec_id.get() != 27) { // "libx265"
 				codecCtx.flags.set(codecCtx.flags.get() | LibAVCodec.CODEC_FLAG_GLOBAL_HEADER);
             }
         	int timeBaseNum = builder.timebaseNum == null ? decoderImpl.codecCtx.time_base.num.get() * decoderImpl.codecCtx.ticks_per_frame.get(): builder.timebaseNum;
