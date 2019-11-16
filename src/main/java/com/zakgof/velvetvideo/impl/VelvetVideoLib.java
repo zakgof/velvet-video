@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -820,25 +821,9 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
         @Override
         public Iterator<IDecodedPacket> iterator() {
-        	return new Iterator<IDecodedPacket>() {
-
-        		private IDecodedPacket next = nextPacket();
-
-				@Override
-				public boolean hasNext() {
-					return next != null;
-				}
-
-				@Override
-				public IDecodedPacket next() {
-					if (next == null)
-						throw new NoSuchElementException();
-					IDecodedPacket ret = next;
-					next = nextPacket();
-					return ret;
-				}
-			};
+        	return iteratorFromSupplier(this::nextPacket);
         }
+
 
         /**
 		 * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
@@ -908,6 +893,11 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			}
 
 			@Override
+			public Iterator<IVideoFrame> iterator() {
+				return iteratorFromSupplier(this::nextFrame);
+			}
+
+			@Override
 			public IDecoderVideoStream seek(long frameNumber) {
 				seekToFrame(frameNumber);
 				return this;
@@ -949,6 +939,11 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 					}
 				}
 				return null;
+			}
+
+			@Override
+			public Iterator<IAudioFrame> iterator() {
+				return iteratorFromSupplier(this::nextFrame);
 			}
 
 			@Override
@@ -1177,6 +1172,27 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
     }
+
+	private static <T> Iterator<T> iteratorFromSupplier(Supplier<T> supplier) {
+		return new Iterator<T>() {
+
+    		private T next = supplier.get();
+
+			@Override
+			public boolean hasNext() {
+				return next != null;
+			}
+
+			@Override
+			public T next() {
+				if (next == null)
+					throw new NoSuchElementException();
+				T ret = next;
+				next = supplier.get();
+				return ret;
+			}
+		};
+	}
 }
 
 @Accessors(fluent = true)

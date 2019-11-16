@@ -2,7 +2,7 @@ package com.zakgof.velvetvideo;
 
 import java.util.Map;
 
-public interface IDecoderStream<I extends IDecoderStream<?, ?, ?>, F, P> {
+public interface IDecoderStream<I extends IDecoderStream<?, ?, ?>, F, P> extends Iterable<F> {
 	String name();
 
 	F nextFrame();
