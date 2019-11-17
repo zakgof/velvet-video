@@ -25,6 +25,9 @@ public interface LibAVCodec {
 	AVPacket av_packet_alloc();
 
 	void av_init_packet(AVPacket packet);
+	int av_new_packet(AVPacket packet, int length);
+
+	int av_packet_from_data(AVPacket pkt, @In Pointer data, @In int size);
 
 	void av_packet_free(Pointer[] packet);
 
@@ -106,5 +109,7 @@ public interface LibAVCodec {
 		}
 		return false;
 	}
+
+
 
 }

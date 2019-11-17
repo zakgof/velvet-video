@@ -75,7 +75,6 @@ import com.zakgof.velvetvideo.impl.middle.IFrameHolder;
 import com.zakgof.velvetvideo.impl.middle.VideoFrameHolder;
 
 import jnr.ffi.Pointer;
-import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
 import jnr.ffi.byref.PointerByReference;
 import lombok.RequiredArgsConstructor;
@@ -197,6 +196,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 		@Override
 		public void close() {
+			libavcodec.av_packet_unref(packet);
 			libavcodec.av_packet_free(new Pointer[] {Struct.getMemory(packet)});
 		}
 
@@ -224,17 +224,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     	@Override
 		public void writeRaw(byte[] packetData) {
-			// TODO !!! free
-			Pointer pointer = Runtime.getSystemRuntime().getMemoryManager().allocateDirect(packetData.length);
-			pointer.put(0, packetData, 0, packetData.length);
-            libavcodec.av_init_packet(packet);
-            packet.data.set(pointer);
-            packet.size.set(packetData.length);
+			checkcode(libavcodec.av_new_packet(packet, packetData.length));
+            packet.data.get().put(0, packetData, 0, packetData.length);
             packet.stream_index.set(streamIndex);
             packet.pts.set(nextPts);
 			packet.duration.set(defaultFrameDuration);
 			nextPts += defaultFrameDuration;
             output.accept(packet);
+            libavcodec.av_packet_unref(packet);
 		}
 
     }
@@ -794,7 +791,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
         private AVPacket nextRawPacket() {
 			libavcodec.av_init_packet(packet);
-			packet.data.set((Pointer) null);
+			packet.data.set((Pointer) null); // TODO Wouldn't it overwrite ?
 			packet.size.set(0);
 			int res = libavformat.av_read_frame(formatCtx, packet);
 			if (res == AVERROR_EOF || res == -1) {
@@ -1106,15 +1103,15 @@ public class VelvetVideoLib implements IVelvetVideoLib {
                 	filters.reset();
 			}
 
-            public byte[] nextRawPacket() {
-            	 AVPacket p;
-            	 while ((p = DemuxerImpl.this.nextRawPacket()) != null) {
-            		 if (p.stream_index.get() == index) {
-            			 return p.bytes();
-            		 }
-            	 }
-            	 return null;
-            }
+			public byte[] nextRawPacket() {
+				AVPacket p;
+				while ((p = DemuxerImpl.this.nextRawPacket()) != null) {
+					byte[] bytes = (p.stream_index.get() == index) ? p.bytes() : null;
+					libavcodec.av_packet_unref(p);
+					return bytes;
+				}
+				return null;
+			}
 
 			public void setFilter(String filterString) {
 				if (filterString != null)
