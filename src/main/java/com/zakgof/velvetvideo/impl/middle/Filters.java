@@ -110,17 +110,16 @@ public class Filters implements AutoCloseable {
 
 	public void reset() {
 		logFilter.atDebug().log("draining filters");
-		while (libavfilter.av_buffersink_get_frame(buffersink_ctx, workframe) >= 0)
-			;
+		while (libavfilter.av_buffersink_get_frame(buffersink_ctx, workframe) >= 0);
 	}
 
 	@Override
 	public void close() {
-		// libavfilter.avfilter_inout_free(new Pointer[] { Struct.getMemory(inputs) });
-		// libavfilter.avfilter_inout_free(new Pointer[] { Struct.getMemory(outputs) });
-//		libavfilter.avfilter_graph_free(new Pointer[] { Struct.getMemory(graph) });
-//		if (workframe != null) {
-//			libavutil.av_frame_free(new Pointer[] { Struct.getMemory(workframe) });
-//		}
+		libavfilter.avfilter_graph_free(new Pointer[] { Struct.getMemory(graph) });
+//		libavfilter.avfilter_inout_free(new Pointer[] { Struct.getMemory(inputs) });
+// 		libavfilter.avfilter_inout_free(new Pointer[] { Struct.getMemory(outputs) });
+		if (workframe != null) {
+			libavutil.av_frame_free(new Pointer[] { Struct.getMemory(workframe) });
+		}
 	}
 }

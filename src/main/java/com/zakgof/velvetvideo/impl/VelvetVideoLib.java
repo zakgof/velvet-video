@@ -297,7 +297,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			} else {
 				Feeder.feed(frame,
 					inputFrame -> filters.submitFrame(inputFrame),
-					outputFrame -> encodeFrame(outputFrame));
+					outputFrame -> {
+						encodeFrame(outputFrame);
+						libavutil.av_frame_unref(outputFrame);
+					});
 			}
 		}
 
@@ -411,13 +414,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 		@Override
 		public void close() {
+			super.close();
 			if (frameHolder != null) {
             	frameHolder.close();
             }
 			if (filters != null) {
 				filters.close();
 			}
-			super.close();
 		}
 
     }
@@ -1019,7 +1022,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 	                logDecoder.atDebug().addArgument(pts).log("delivered frame pts={}");
 	                if (skipToPts != -1) {
 	                	if (pts == AVNOPTS_VALUE) {
-	                		throw new VelvetVideoException("Cannot seek when decoded packets have no PTS. Looks like neighter codec no container keep timing information.");
+	                		throw new VelvetVideoException("Cannot seek when decoded packets have no PTS. Looks like neither codec no container keep timing information.");
 	                	}
 	                    if (pts < skipToPts) {
 							logDecoder.atDebug().addArgument(() -> skipToPts)
@@ -1037,7 +1040,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 	                    skipToPts = -1;
 	                }
 	                IDecodedPacket decodedPacket = frameHolder.decode(frame, this);
-	                // libavutil.av_frame_unref(frame);
+	                if (filters !=null)
+	                	libavutil.av_frame_unref(frame);
 	                return decodedPacket;
             	}
             }
