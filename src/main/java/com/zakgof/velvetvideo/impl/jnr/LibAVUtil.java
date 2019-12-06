@@ -1,6 +1,8 @@
 package com.zakgof.velvetvideo.impl.jnr;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -39,6 +41,7 @@ public interface LibAVUtil {
 	void av_opt_set_int(Pointer object, String name, @int64_t int value, int flags);
 
 	void av_opt_set_sample_fmt(Pointer object, String name, AVSampleFormat value, int flags);
+	AVOption av_opt_next(Pointer object, @In AVOption prev);
 
 
 	int av_strerror(int errnum, Pointer errbuf, int errbuf_size);
@@ -98,6 +101,15 @@ public interface LibAVUtil {
             throw new VelvetVideoException("FFMPEG error " + code + " : "+ s);
         }
         return code;
+	}
+
+	default List<String> options(Pointer obj) {
+		List<String> options = new ArrayList<>();
+		AVOption curr = null;
+		while((curr = av_opt_next(obj, curr)) != null) {
+			options.add(curr.name.get());
+		}
+		return options;
 	}
 
 
