@@ -232,11 +232,11 @@ public class VelvetVideoTest {
 		return quiFFT.fullFFT();
 	}
 
-	protected byte[] readAudio(File file) {
+	protected byte[] readAudio(File file, int ms) {
 		IVelvetVideoLib lib = new VelvetVideoLib();
 		IDecoderAudioStream audioStream = lib.demuxer(file).audioStreams().get(0);
 		AudioFormat format = audioStream.properties().format();
-		int length = (int) (5 * format.getSampleRate() * format.getSampleSizeInBits() / 8);
+		int length = (int) (ms * format.getSampleRate() * format.getSampleSizeInBits() * format.getChannels() / 8000);
 		byte[] buffer = new byte[length + 4096];
 		IAudioFrame frame;
 		int offset = 0;
@@ -248,7 +248,7 @@ public class VelvetVideoTest {
 		}
 		// Assertions.assertEquals(length, offset);
 		System.err.println("Audio length: " + offset + "  (diff=" + (offset-length) + ")");
-		return Arrays.copyOf(buffer, 220500);
+		return Arrays.copyOf(buffer, length);
 	}
 
 	protected static File local(String url, String localname) {

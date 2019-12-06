@@ -427,14 +427,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private class AudioEncoderStreamImpl extends AbstractEncoderStreamImpl<AudioEncoderBuilderImpl> implements IEncoderAudioStream {
 
- 		private final AudioFrameHolder frameHolder;
+ 		private AudioFrameHolder frameHolder;
 		private AudioFormat inputSampleFormat;
-		private AudioFormat codecSampleFormat;
 
 		public AudioEncoderStreamImpl(AudioEncoderBuilderImpl builder, AVFormatContext formatCtx,
  				Consumer<AVPacket> output) {
  			super(builder, formatCtx, output);
- 			frameHolder = new AudioFrameHolder(codecCtx.time_base, true, codecCtx, builder.inputFormat);
+
  		}
 
 		@Override
@@ -442,16 +441,17 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 			this.inputSampleFormat = builder.inputFormat;
 			Set<AudioFormat> supportedFormats = getSampleFormats(codec.sample_fmts.get());
-			AudioFormat codecSampleFormat = new BestMatchingAudioFormatConvertor(supportedFormats).apply(inputSampleFormat);
-			AudioFormat codecAudioFormat = AVSampleFormat.from(codecSampleFormat).toAudioFormat((int)inputSampleFormat.getSampleRate(), inputSampleFormat.getChannels());
+			AudioFormat codecAudioFormat = new BestMatchingAudioFormatConvertor(supportedFormats).apply(inputSampleFormat);
+			codecAudioFormat = AVSampleFormat.from(codecAudioFormat).toAudioFormat((int)inputSampleFormat.getSampleRate(), inputSampleFormat.getChannels());
 
-			codecCtx.channels.set(inputSampleFormat.getChannels());
-			codecCtx.channel_layout.set(libavutil.av_get_default_channel_layout(inputSampleFormat.getChannels()));
-			codecCtx.sample_rate.set((int)inputSampleFormat.getSampleRate());
+			codecCtx.channels.set(codecAudioFormat.getChannels());
+			codecCtx.channel_layout.set(libavutil.av_get_default_channel_layout(codecAudioFormat.getChannels()));
+			codecCtx.sample_rate.set((int)codecAudioFormat.getSampleRate());
 			codecCtx.sample_fmt.set(AVSampleFormat.from(codecAudioFormat));
-			codecCtx.bit_rate.set(builder.bitrate == null ? 64000 : builder.bitrate); //TODO default audio bit rate ?
+			codecCtx.bit_rate.set(builder.bitrate == null ? 128 * 1024 : builder.bitrate); //TODO default audio bit rate ?
 
 			checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), new Pointer[]{codecOpts}));
+			frameHolder = new AudioFrameHolder(codecCtx.time_base, true, codecCtx, builder.inputFormat);
 			this.codecOpened = true;
 		}
 
