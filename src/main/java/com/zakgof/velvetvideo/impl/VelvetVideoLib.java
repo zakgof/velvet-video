@@ -8,7 +8,6 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -440,30 +439,20 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		void initCodecCtx(AudioEncoderBuilderImpl builder) {
 
 			this.inputSampleFormat = builder.inputFormat;
-			Set<AudioFormat> supportedFormats = getSampleFormats(codec.sample_fmts.get());
-			AudioFormat codecAudioFormat = new BestMatchingAudioFormatConvertor(supportedFormats).apply(inputSampleFormat);
-			codecAudioFormat = AVSampleFormat.from(codecAudioFormat).toAudioFormat((int)inputSampleFormat.getSampleRate(), inputSampleFormat.getChannels());
+			Set<AVSampleFormat> supportedFormats = codec.sampleFormats();
+			AVSampleFormat codecAVSampleFormat = BestMatchingAudioFormatConvertor.findBest(supportedFormats, inputSampleFormat);
 
+			AudioFormat codecAudioFormat = codecAVSampleFormat.toAudioFormat((int)inputSampleFormat.getSampleRate(), inputSampleFormat.getChannels());
+
+			codecCtx.sample_fmt.set(codecAVSampleFormat);
+			codecCtx.sample_rate.set((int)codecAudioFormat.getSampleRate());
 			codecCtx.channels.set(codecAudioFormat.getChannels());
 			codecCtx.channel_layout.set(libavutil.av_get_default_channel_layout(codecAudioFormat.getChannels()));
-			codecCtx.sample_rate.set((int)codecAudioFormat.getSampleRate());
-			codecCtx.sample_fmt.set(AVSampleFormat.from(codecAudioFormat));
 			codecCtx.bit_rate.set(builder.bitrate == null ? 128 * 1024 : builder.bitrate); //TODO default audio bit rate ?
 
 			checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), new Pointer[]{codecOpts}));
 			frameHolder = new AudioFrameHolder(codecCtx.time_base, true, codecCtx, builder.inputFormat);
 			this.codecOpened = true;
-		}
-
-		private Set<AudioFormat> getSampleFormats(Pointer sample_fmts) {
-			Set<AudioFormat> formats = new HashSet<>();
-			for (int offset = 0;;) {
-				int val = sample_fmts.getInt(offset);
-				if (val == -1)
-					return formats;
-				formats.add(AVSampleFormat.values()[val].toAudioFormat(-1, 0));
-				offset += 4;
-			}
 		}
 
 		@Override
