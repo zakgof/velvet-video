@@ -44,8 +44,8 @@ The choice for native package is:
 ### gradle
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video:0.3.0'
-    compile 'com.github.zakgof:velvet-video-natives:0.2.1.full'
+    compile 'com.github.zakgof:velvet-video:0.3.7'
+    compile 'com.github.zakgof:velvet-video-natives:0.2.6.full'
 }
 ````
 ### maven
