@@ -244,7 +244,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 		protected final String filterString;
 		protected Filters filters;
-		private final Map<Long, Integer> frameDurationCache = new HashMap<>();
+		private long nextExpectedPts;
 
         public AbstractEncoderStreamImpl(B builder, AVFormatContext formatCtx, Consumer<AVPacket> output) {
         	super(output);
@@ -268,6 +268,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             if (builder.enableExperimental) {
             	codecCtx.strict_std_compliance.set(-2);
+            	formatCtx.strict_std_compliance.set(-2);
             }
 
             initCodecCtx(builder);
@@ -288,9 +289,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		abstract void initCodecCtx(B builder);
 
 		protected void submitFrame(AVFrame frame, int duration) {
-			if (frame != null) {
-				frameDurationCache.put(frame.pts.get(), duration);
-			}
 			if (filters == null) {
 				encodeFrame(frame);
 			} else {
@@ -304,19 +302,20 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		}
 
         private void encodeFrame(AVFrame frame) {
-        	logEncoder.atDebug().log(() -> frame == null ? "stream " + streamIndex + ": flush" :  "stream " + streamIndex + ": send frame for encoding, PTS=" + frame.pts.get() + " duration=" + frameDurationCache.get(frame.pts.get()));
+        	logEncoder.atDebug()
+        		.addArgument(streamIndex)
+        		.log(() -> frame == null ? "stream {}: flush" :  "stream {}: send frame for encoding, PTS=" + frame.pts.get());
         	checkcode(libavcodec.avcodec_send_frame(codecCtx, frame));
             // libavutil.av_frame_unref(frame);
             for (;;) {
-//                libavcodec.av_init_packet(packet);
-//				packet.data.set((Pointer) null);
-//				packet.size.set(0);
-
+            	libavcodec.av_init_packet(packet);
                 int res = libavcodec.avcodec_receive_packet(codecCtx, packet);
                 if (res == AVERROR_EAGAIN || res == AVERROR_EOF)
                     break;
                 checkcode(res);
                 packet.stream_index.set(streamIndex);
+
+
 
 //                Integer dur = frameDurationCache.remove(packet.pts.get());
 //                packet.pts.set(codecToStream(packet.pts.get()));
@@ -333,16 +332,21 @@ public class VelvetVideoLib implements IVelvetVideoLib {
                 	.addArgument(() -> packet.size.get())
                 	.log(() -> "encoder: returned packet  PTS/DTS: {}/{}, duration={}, {} bytes");
 
-                Integer dur = frameDurationCache.remove(packet.pts.get());
-        		if ((packet.duration.get() == 0 || packet.duration.get() == AVNOPTS_VALUE)) {
-        			if (dur == null)
-        				dur = 1;
-        			packet.duration.set(dur * defaultFrameDuration);
-    			}
+                fixEncodedPacketPtsDtsDuration();
+        		if (packet.pts.get() != nextExpectedPts) {
+        			logEncoder.atWarn()
+        				.addArgument(nextExpectedPts)
+        				.addArgument(packet.pts.get())
+        				.log("expected PTS mismatch: expected {}, actual {}");
+        		}
+        		nextExpectedPts = packet.pts.get() + packet.duration.get();
                 output.accept(packet);
+
                 libavcodec.av_packet_unref(packet);
             }
         }
+
+		abstract protected void fixEncodedPacketPtsDtsDuration();
 
 		@Override
 		public void close() {
@@ -360,6 +364,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     private class VideoEncoderStreamImpl extends AbstractEncoderStreamImpl<VideoEncoderBuilderImpl> implements IEncoderVideoStream {
 
 		private VideoFrameHolder frameHolder;
+		private final Map<Long, Integer> frameDurationCache = new HashMap<>();
 
 		public VideoEncoderStreamImpl(VideoEncoderBuilderImpl builder, AVFormatContext formatCtx,
 				Consumer<AVPacket> output) {
@@ -377,6 +382,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		@Override
         public void encode(BufferedImage image) {
 			encode(image, 1);
+		}
+
+		@Override
+		protected void submitFrame(AVFrame frame, int duration) {
+			if (frame != null) {
+				frameDurationCache.put(frame.pts.get(), duration);
+			}
+			super.submitFrame(frame, duration);
 		}
 
 		@Override
@@ -410,6 +423,19 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             nextPts += duration * defaultFrameDuration;
             submitFrame(frame, duration);
         }
+
+		@Override
+		protected void fixEncodedPacketPtsDtsDuration() {
+			Integer dur = frameDurationCache.remove(packet.pts.get());
+			if ((packet.duration.get() == 0 || packet.duration.get() == AVNOPTS_VALUE)) {
+				if (dur == null)
+					dur = 1;
+				packet.duration.set(dur * defaultFrameDuration);
+				logEncoder.atDebug()
+					.addArgument(() -> packet.duration.get())
+					.log(() -> "encoder: duration adjusted to {}");
+			}
+		}
 
 		@Override
 		public void close() {
@@ -453,6 +479,21 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), new Pointer[]{codecOpts}));
 			frameHolder = new AudioFrameHolder(codecCtx.time_base, true, codecCtx, builder.inputFormat);
 			this.codecOpened = true;
+		}
+
+		@Override
+		protected void fixEncodedPacketPtsDtsDuration() {
+			//long dur = packet.duration.get();
+			//if (dur == codecCtx.frame_size.get() && (codecCtx.time_base.den.get() != stream.time_base.den.get() || codecCtx.time_base.num.get() != stream.time_base.num.get())) {
+			//	logEncoder.atWarn().log("duration not converted");
+				packet.pts.set(codecToStream(packet.pts.get()));
+				packet.dts.set(codecToStream(packet.dts.get()));
+				packet.duration.set(codecToStream(packet.duration.get()));
+			//}
+		}
+
+		private long codecToStream(long dur) {
+			return dur * stream.time_base.den.get() * codecCtx.time_base.num.get() / (stream.time_base.num.get() * codecCtx.time_base.den.get());
 		}
 
 		@Override
@@ -797,7 +838,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 				.addArgument(packet.pts.get())
 				.addArgument(packet.dts.get())
 				.addArgument(packet.duration.get())
-				.log(() -> "stream {}: read packet PTS/DTS={}/{} duration={}");
+				.addArgument(packet.size.get())
+				.log(() -> "stream {}: read packet PTS/DTS={}/{} duration={} size={} bytes");
 			return packet;
         }
 

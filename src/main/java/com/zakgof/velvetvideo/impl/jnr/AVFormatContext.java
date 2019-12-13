@@ -53,4 +53,12 @@ public class AVFormatContext extends Struct {
     Unsigned32 nb_chapters = new Unsigned32();
     Pointer chapters = new Pointer();
     public Pointer metadata = new Pointer();
+	int64_t start_time_realtime = new int64_t();
+	public Signed32 fps_probe_size = new Signed32();
+	public Signed32 error_recognition = new Signed32();
+	Pointer interrupt_callback1 = new Pointer();
+	Pointer interrupt_callback2 = new Pointer();
+	public Signed32 debug = new Signed32();
+	int64_t max_interleave_delta = new int64_t();
+	public Signed32 strict_std_compliance = new Signed32();
 }

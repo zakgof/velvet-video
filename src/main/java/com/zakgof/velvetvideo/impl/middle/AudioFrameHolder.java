@@ -49,6 +49,7 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 			frame.nb_samples.set(frameSamples);
 			frame.format.set(codecCtx.sample_fmt.longValue());
 			frame.channel_layout.set(codecCtx.channel_layout.get());
+			frame.sample_rate.set((int)userFormat.getSampleRate());
 			libavutil.checkcode(libavutil.av_frame_get_buffer(frame, 0));
 		}
 	}
@@ -86,7 +87,7 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 
 	private void reallocUserBuffer(int size) {
 		if (size != userBufferSamplesSize) {
-			if (this.userBuffer != null) {
+			if (this.userBuffer[0] != null) {
 				 libavutil.av_freep(userBuffer);
 			}
 			userBufferSamplesSize = size;
