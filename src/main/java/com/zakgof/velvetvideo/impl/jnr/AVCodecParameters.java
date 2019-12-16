@@ -2,11 +2,6 @@ package com.zakgof.velvetvideo.impl.jnr;
 
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
-import jnr.ffi.Struct.Pointer;
-import jnr.ffi.Struct.Signed32;
-import jnr.ffi.Struct.int32_t;
-import jnr.ffi.Struct.int64_t;
-import jnr.ffi.Struct.u_int64_t;
 
 public class AVCodecParameters extends Struct {
 

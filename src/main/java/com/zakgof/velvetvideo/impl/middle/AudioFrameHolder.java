@@ -32,7 +32,6 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 	private Pointer[] userBuffer;
 	private int userBufferSamplesSize;
 	private int frameSamples;
-	private long nextPts;
 	private int bytesPerSample;
 
     public AudioFrameHolder(AVRational timebase, boolean encode, AVCodecContext codecCtx, AudioFormat userFormat) {
@@ -119,12 +118,6 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
     }
 
 	@Override
-	public long pts() {
-		// TODO
-		return frame.pts.get();
-	}
-
-	@Override
 	public AVFrame frame() {
 		// TODO
 		return frame;
@@ -142,38 +135,9 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 		}
 		long duration = libavutil.av_frame_get_pkt_duration(frame);
 		byte[] samples = samples(frame);
-
-//		if (pts > nextPts) {
-//			System.err.println("BAD PTS: GAP " + nextPts + " --> " + pts); // TODO
-//			int offset = (int) (pts - nextPts);
-//			int bytepadding = offset * bytesPerSample;
-//			byte[] oldsamples = samples;
-//			samples = new byte[bytepadding + oldsamples.length];
-//			System.arraycopy(oldsamples, 0, samples, bytepadding, oldsamples.length);
-//			duration += offset;
-//		}
-//		if (pts < nextPts) {
-//			// TODO: log warning
-//			long offset = nextPts - pts;
-//			System.err.println("BAD PTS: OVERLAP " + nextPts + " --> " + pts); // TODO
-//			if (samples.length < offset * bytesPerSample) {
-//				samples = new byte[] {};
-//				duration = 0;
-//			} else {
-//				samples = Arrays.copyOfRange(samples, (int) (offset * bytesPerSample), samples.length);
-//				duration = duration - offset;
-//			}
-//			pts = nextPts;
-//
-//			System.err.println("FIXING PTS !!!!");
-//		}
-
 		long nanostamp = pts * 1000000000L * timebase.num.get() / timebase.den.get();
-		nextPts = pts + duration;
 		long nanoduration = duration * 1000000000L * timebase.num.get() / timebase.den.get();
 		return new AudioFrameImpl(samples, nanostamp, nanoduration, (IDecoderAudioStream)stream);
 	}
-
-
 
 }

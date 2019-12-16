@@ -85,10 +85,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private static final int AVIO_CUSTOM_BUFFER_SIZE = 32768;
 
-    private static final int  AVSEEK_FLAG_BACKWARD =1; ///< seek backward
-    private static final int  AVSEEK_FLAG_BYTE     =2; ///< seeking based on position in bytes
-    private static final int  AVSEEK_FLAG_ANY      =4; ///< seek to any frame, even non-keyframes
-    private static final int  AVSEEK_FLAG_FRAME    =8;
 
     public static final int AVERROR_EOF = -541478725;
     public static final int AVERROR_EAGAIN = -11;
@@ -813,7 +809,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             public int seek(Pointer opaque, int offset, int whence) {
 
                 final int SEEK_SET = 0;   /* set file offset to offset */
-                final int SEEK_CUR = 1;   /* set file offset to current plus offset */
+                // final int SEEK_CUR = 1;   /* set file offset to current plus offset */
                 final int SEEK_END = 2;   /* set file offset to EOF plus offset */
                 final int AVSEEK_SIZE = 0x10000;   /* set file offset to EOF plus offset */
 
@@ -1027,7 +1023,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             private final String name;
 
-
             protected IFrameHolder frameHolder;
             private final int index;
             private long skipToPts = -1;
@@ -1142,7 +1137,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             }
 
 			private void seekToPts(long pts) {
-				checkcode(libavformat.av_seek_frame(formatCtx, this.index, pts, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD));
+				checkcode(libavformat.av_seek_frame(formatCtx, this.index, pts, LibAVFormat.AVSEEK_FLAG_FRAME | LibAVFormat.AVSEEK_FLAG_BACKWARD));
                 libavcodec.avcodec_flush_buffers(codecCtx);
                 this.skipToPts  = pts;
                 flushStreamIndex = 0;
