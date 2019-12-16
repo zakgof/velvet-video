@@ -85,8 +85,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private static final int AVIO_CUSTOM_BUFFER_SIZE = 32768;
 
-
-
     private static final int  AVSEEK_FLAG_BACKWARD =1; ///< seek backward
     private static final int  AVSEEK_FLAG_BYTE     =2; ///< seeking based on position in bytes
     private static final int  AVSEEK_FLAG_ANY      =4; ///< seek to any frame, even non-keyframes
@@ -106,6 +104,22 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec", 58);
     private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
+
+    private static volatile IVelvetVideoLib instance;
+
+	public static IVelvetVideoLib getInstance() {
+		if (instance == null) {
+			synchronized (VelvetVideoLib.class) {
+				if (instance == null) {
+					instance = new VelvetVideoLib();
+				}
+			}
+		}
+		return instance;
+	}
+
+    private VelvetVideoLib() {
+    }
 
     private int checkcode(int code) {
     	return libavutil.checkcode(code);
@@ -356,8 +370,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 				libavcodec.avcodec_free_context(new Pointer[] { Struct.getMemory(codecCtx) });
 			}
 			super.close();
-			// libavutil.av_dict_free(new Pointer[] {codecOpts});
-			// libavutil.av_dict_free(new Pointer[] {stream.metadata.get()});
 		}
     }
 

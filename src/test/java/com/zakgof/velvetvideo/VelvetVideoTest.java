@@ -29,7 +29,7 @@ import com.zakgof.velvetvideo.impl.VelvetVideoLib;
 
 public class VelvetVideoTest {
 
-	protected IVelvetVideoLib lib = new VelvetVideoLib();
+	protected IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 	protected static Path dir;
 
 	@BeforeAll
@@ -227,7 +227,7 @@ public class VelvetVideoTest {
 	}
 
 	protected byte[] readAudio(File file, int ms) {
-		IVelvetVideoLib lib = new VelvetVideoLib();
+		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		IDecoderAudioStream audioStream = lib.demuxer(file).audioStreams().get(0);
 		AudioFormat format = audioStream.properties().format();
 		int length = (int) (ms * format.getSampleRate() * format.getSampleSizeInBits() * format.getChannels() / 8000);
