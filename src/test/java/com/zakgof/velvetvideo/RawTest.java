@@ -73,8 +73,8 @@ public class RawTest extends VelvetVideoTest {
 		// Read and check MP4 frames
 		try (IDemuxer demuxer = lib.demuxer(remuxed)) {
 			for (int i=0; i<FRAMES; i++) {
-				IDecodedPacket packet = demuxer.nextPacket();
-				BufferedImage remuxedImage = packet.video().image();
+				IDecodedPacket<?> packet = demuxer.nextPacket();
+				BufferedImage remuxedImage = packet.asVideo().image();
 				assertEqual(remuxedImage, rest1.get(i));
 			}
 		}
@@ -110,8 +110,8 @@ public class RawTest extends VelvetVideoTest {
 		try (IDemuxer demuxer = lib.demuxer(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
 				for (int i=0; i<FRAMES; i++) {
-					IDecodedPacket packet = demuxer.nextPacket();
-					BufferedImage remuxedImage = packet.video().image();
+					IDecodedPacket<?> packet = demuxer.nextPacket();
+					BufferedImage remuxedImage = packet.asVideo().image();
 					assertEqual(remuxedImage, original.get(i));
 				}
 			}

@@ -6,11 +6,13 @@ import com.zakgof.velvetvideo.impl.jnr.AVFrame;
 
 public interface IFrameHolder extends AutoCloseable {
 
-	long pts(); // frame.pts.get();
+	default long pts() {
+		return frame().pts.get();
+	}
 
 	AVFrame frame();
 
-	IDecodedPacket decode(AVFrame frame, AbstractDecoderStream stream);
+	IDecodedPacket<?> decode(AVFrame frame, AbstractDecoderStream stream);
 
 	@Override
 	void close();

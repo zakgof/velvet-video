@@ -84,7 +84,7 @@ public class Filters implements AutoCloseable {
 
 	public AVFrame submitFrame(AVFrame inputframe) {
 
-		if (workframe == null) {
+		if (workframe == null && inputframe != null) {
 			workframe = libavutil.av_frame_alloc();
 			workframe.width.set(inputframe.width.get());
 			workframe.height.set(inputframe.height.get());

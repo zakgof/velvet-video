@@ -1,20 +1,25 @@
 package com.zakgof.velvetvideo;
 
-public interface IDecodedPacket {
-	default IVideoFrame video() {
+public interface IDecodedPacket<S extends IDecoderStream<?, ?, ?>> {
+
+	MediaType type();
+
+	default boolean is(MediaType mediaType) {
+		return type() == mediaType;
+	}
+
+	default IVideoFrame asVideo() {
 		return null;
 	}
 
-	default boolean isVideo() {
-		return false;
-	}
-
-	default IAudioFrame audio() {
+	default IAudioFrame asAudio() {
 		return null;
 	}
 
-	default boolean isAudio() {
-		return false;
-	}
-	// TODO: enum ?
+	S stream();
+
+	long nanostamp();
+
+	long nanoduration();
+
 }

@@ -1,11 +1,15 @@
 package com.zakgof.velvetvideo;
 
-public interface IAudioFrame {
+public interface IAudioFrame extends IDecodedPacket<IDecoderAudioStream> {
 	byte[] samples();
 
-	long nanostamp();
+	@Override
+	default MediaType type() {
+		return MediaType.Audio;
+	}
 
-	long nanoduration();
-
-	IDecoderAudioStream stream();
+	@Override
+	default IAudioFrame asAudio() {
+		return this;
+	}
 }

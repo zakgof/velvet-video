@@ -8,10 +8,16 @@ import jnr.ffi.annotations.StdCall;
 import jnr.ffi.byref.PointerByReference;
 
 public interface LibAVFormat {
-	
+
     static final int AVFMT_FLAG_CUSTOM_IO =  0x0080;
     static final int AVFMT_GLOBALHEADER = 0x0040;
-	
+
+    static final int  AVSEEK_FLAG_BACKWARD = 1; ///< seek backward
+    static final int  AVSEEK_FLAG_BYTE     = 2; ///< seeking based on position in bytes
+    static final int  AVSEEK_FLAG_ANY      = 4; ///< seek to any frame, even non-keyframes
+    static final int  AVSEEK_FLAG_FRAME    = 8;
+
+
 	int avformat_alloc_output_context2(@Out PointerByReference ctx, AVOutputFormat oformat, String format_name,
 			String filename);
 

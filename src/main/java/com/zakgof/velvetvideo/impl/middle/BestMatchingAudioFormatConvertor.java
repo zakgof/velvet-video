@@ -2,6 +2,7 @@ package com.zakgof.velvetvideo.impl.middle;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -11,6 +12,7 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.Mixer;
 
 import com.zakgof.tools.generic.MinFinder;
+import com.zakgof.velvetvideo.impl.jnr.AVSampleFormat;
 
 public class BestMatchingAudioFormatConvertor implements Function<AudioFormat, AudioFormat> {
 
@@ -33,7 +35,7 @@ public class BestMatchingAudioFormatConvertor implements Function<AudioFormat, A
 		return suggested;
 	}
 
-	private float compare(AudioFormat suggested, AudioFormat format) {
+	private static float compare(AudioFormat suggested, AudioFormat format) {
 		float metric = 0;
 
 		int bitnessDiff = format.getSampleSizeInBits() - suggested.getSampleSizeInBits();
@@ -72,6 +74,14 @@ public class BestMatchingAudioFormatConvertor implements Function<AudioFormat, A
 		    .map(DataLine.Info::getFormats)
 		    .flatMap(Arrays::stream)
 		    .collect(Collectors.toSet());
+	}
+
+	public static AVSampleFormat findBest(Set<AVSampleFormat> supportedFormats, AudioFormat suggested) {
+		AVSampleFormat bestFormat = MinFinder.find(supportedFormats, format -> compare(suggested, format.toAudioFormat(0, -1))).get();
+		if (bestFormat != null) {
+			return bestFormat;
+		}
+		return AVSampleFormat.from(suggested);
 	}
 
 }

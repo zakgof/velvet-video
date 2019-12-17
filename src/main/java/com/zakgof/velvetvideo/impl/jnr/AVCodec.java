@@ -1,5 +1,8 @@
 package com.zakgof.velvetvideo.impl.jnr;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
 
@@ -31,4 +34,15 @@ public class AVCodec extends Struct {
     public java.lang.String toString() {
     	return name.get() + "/" + long_name.get() + " type=" + type.get();
     }
+
+	public Set<AVSampleFormat> sampleFormats() {
+		Set<AVSampleFormat> formats = new HashSet<>();
+		for (int offset = 0;;) {
+			int val = sample_fmts.get().getInt(offset);
+			if (val == -1)
+				return formats;
+			formats.add(AVSampleFormat.values()[val]);
+			offset += 4;
+		}
+	}
 }

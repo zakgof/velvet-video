@@ -22,7 +22,7 @@ public class FilterTest extends VelvetVideoTest {
 	public void testFlipBeforeEncoding() {
 		File file = dir.resolve("before-filter.webm").toFile();
 		System.err.println(file);
-		IVelvetVideoLib lib = new VelvetVideoLib();
+		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		encodeVideoWithFilter(file, lib, FLIP_FILTER);
 		checkFlipped(file, lib, null);
 	}
@@ -31,7 +31,7 @@ public class FilterTest extends VelvetVideoTest {
 	public void testFlipAfterDecoding() {
 		File file = dir.resolve("after-filter.webm").toFile();
 		System.err.println(file);
-		IVelvetVideoLib lib = new VelvetVideoLib();
+		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		encodeVideoWithFilter(file, lib, null);
 
 		checkFlipped(file, lib, FLIP_FILTER);
@@ -51,7 +51,7 @@ public class FilterTest extends VelvetVideoTest {
 			 "fftdnoiz"
 	    })
 	public void testTemporalFilters(String filter) {
-		IVelvetVideoLib lib = new VelvetVideoLib();
+		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		File pre  = dir.resolve("temporal-pre"  + filter.replace(':', '-') + ".webm").toFile();
 		File post = dir.resolve("temporal-post" + filter.replace(':', '-') + ".webm").toFile();
 		File nof = dir.resolve("temporal-nof" + filter.replace(':', '-') + ".webm").toFile();

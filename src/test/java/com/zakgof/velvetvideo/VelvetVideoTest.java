@@ -21,15 +21,15 @@ import javax.sound.sampled.AudioFormat;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.opentest4j.AssertionFailedError;
-import org.quifft.QuiFFT;
-import org.quifft.output.FFTResult;
-import org.quifft.params.WindowFunction;
 
+import com.musicg.fingerprint.FingerprintSimilarity;
+import com.musicg.fingerprint.FingerprintSimilarityComputer;
+import com.musicg.wave.Wave;
 import com.zakgof.velvetvideo.impl.VelvetVideoLib;
 
 public class VelvetVideoTest {
 
-	protected IVelvetVideoLib lib = new VelvetVideoLib();
+	protected IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 	protected static Path dir;
 
 	@BeforeAll
@@ -40,11 +40,13 @@ public class VelvetVideoTest {
 	}
 
 //	@AfterAll
+	@SuppressWarnings("unused")
 	private static void cleanup() {
 		dir.toFile().delete();
 	}
 
 //	@AfterEach
+	@SuppressWarnings("unused")
 	private void clean() {
 		for (File file : dir.toFile().listFiles())
 			file.delete();
@@ -198,8 +200,8 @@ public class VelvetVideoTest {
 		List<BufferedImage> restored = new ArrayList<>(frames);
 		try (IDemuxer demuxer = lib.demuxer(file)) {
 			demuxer.videoStream(0).setFilter(filter);
-			for (IDecodedPacket packet : demuxer) {
-				restored.add(packet.video().image());
+			for (IDecodedPacket<?> packet : demuxer) {
+				restored.add(packet.asVideo().image());
 			}
 		}
 		Assertions.assertEquals(frames, restored.size());
@@ -207,37 +209,31 @@ public class VelvetVideoTest {
 	}
 
 	protected void assertAudioEqual(AudioFormat format, byte[] audio1, byte[] audio2) throws Exception {
-		FFTResult fft1 = fft(format, audio1);
-		FFTResult fft2 = fft(format, audio2);
-		assertFftsEquals(fft1, fft2, 0.07);
+		File f1 = file("compare1.tmp.wav");
+		File f2 = file("compare2.tmp.wav");
+		AudioUtil.saveWav(format, audio1, f1);
+		AudioUtil.saveWav(format, audio2, f2);
+		Wave wave1 = new Wave(f1.getAbsolutePath());
+		Wave wave2 = new Wave(f2.getAbsolutePath());
+		byte[] fingerprint1 = wave1.getFingerprint();
+		byte[] fingerprint2 = wave2.getFingerprint();
+
+
+		FingerprintSimilarityComputer fsc = new FingerprintSimilarityComputer(fingerprint1, fingerprint2);
+		FingerprintSimilarity similarity = fsc.getFingerprintsSimilarity();
+
+		double sim = similarity.getScore();
+		f1.delete();
+		f2.delete();
+		Assertions.assertTrue(sim > 0.4);
 	}
 
-	private void assertFftsEquals(FFTResult fft1, FFTResult fft2, double tolerance) {
-		double avgdiff = 0;
-		Assertions.assertEquals(fft1.fftFrames.length, fft2.fftFrames.length);
-		for (int i=0; i<fft1.fftFrames.length; i++) {
-			Assertions.assertEquals(fft1.fftFrames[i].bins.length, fft2.fftFrames[i].bins.length);
-			for (int b=0; b<fft1.fftFrames[i].bins.length; b++) {
-				double diff = Math.abs((fft1.fftFrames[i].bins[b].amplitude - fft2.fftFrames[i].bins[b].amplitude)/fft2.fftFrames[i].bins[b].amplitude);
-				avgdiff += diff / (fft1.fftFrames.length * fft1.fftFrames[i].bins.length);
-			}
-		}
-		System.err.println("Audio file difference: " + avgdiff);
-		Assertions.assertTrue(avgdiff < tolerance, "Audio waveforms differ too much: " + avgdiff);
-	}
-
-	private FFTResult fft(AudioFormat format, byte[] buf) throws Exception {
-		File f = AudioUtil.saveWav(format, buf, file("tmp.wav"));
-		QuiFFT quiFFT = new QuiFFT(f).windowFunction(WindowFunction.BLACKMAN).windowSize(4096).windowOverlap(0).normalized(true);
-		return quiFFT.fullFFT();
-	}
-
-	protected byte[] readAudio(File file) {
-		IVelvetVideoLib lib = new VelvetVideoLib();
+	protected byte[] readAudio(File file, int ms) {
+		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		IDecoderAudioStream audioStream = lib.demuxer(file).audioStreams().get(0);
 		AudioFormat format = audioStream.properties().format();
-		int length = (int) (5 * format.getSampleRate() * format.getSampleSizeInBits() / 8);
-		byte[] buffer = new byte[length + 4096];
+		int length = (int) (ms * format.getSampleRate() * format.getSampleSizeInBits() * format.getChannels() / 8000);
+		byte[] buffer = new byte[length + 16384];
 		IAudioFrame frame;
 		int offset = 0;
 		while ((frame = audioStream.nextFrame())!=null) {
@@ -248,7 +244,7 @@ public class VelvetVideoTest {
 		}
 		// Assertions.assertEquals(length, offset);
 		System.err.println("Audio length: " + offset + "  (diff=" + (offset-length) + ")");
-		return Arrays.copyOf(buffer, 220500);
+		return Arrays.copyOf(buffer, length);
 	}
 
 	protected static File local(String url, String localname) {

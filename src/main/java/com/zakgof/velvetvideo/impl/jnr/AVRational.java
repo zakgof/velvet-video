@@ -2,7 +2,6 @@ package com.zakgof.velvetvideo.impl.jnr;
 
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
-import jnr.ffi.Struct.Signed32;
 
 public class AVRational extends Struct {
 

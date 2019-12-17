@@ -8,7 +8,6 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -87,12 +86,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     private static final int AVIO_CUSTOM_BUFFER_SIZE = 32768;
 
 
-
-    private static final int  AVSEEK_FLAG_BACKWARD =1; ///< seek backward
-    private static final int  AVSEEK_FLAG_BYTE     =2; ///< seeking based on position in bytes
-    private static final int  AVSEEK_FLAG_ANY      =4; ///< seek to any frame, even non-keyframes
-    private static final int  AVSEEK_FLAG_FRAME    =8;
-
     public static final int AVERROR_EOF = -541478725;
     public static final int AVERROR_EAGAIN = -11;
     private static final long AVNOPTS_VALUE = LibAVUtil.AVNOPTS_VALUE;
@@ -107,6 +100,22 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private final LibAVCodec libavcodec = JNRHelper.load(LibAVCodec.class, "avcodec", 58);
     private final LibAVFormat libavformat = JNRHelper.load(LibAVFormat.class, "avformat", 58);
+
+    private static volatile IVelvetVideoLib instance;
+
+	public static IVelvetVideoLib getInstance() {
+		if (instance == null) {
+			synchronized (VelvetVideoLib.class) {
+				if (instance == null) {
+					instance = new VelvetVideoLib();
+				}
+			}
+		}
+		return instance;
+	}
+
+    private VelvetVideoLib() {
+    }
 
     private int checkcode(int code) {
     	return libavutil.checkcode(code);
@@ -245,7 +254,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 		protected final String filterString;
 		protected Filters filters;
-		private final Map<Long, Integer> frameDurationCache = new HashMap<>();
+		private long nextExpectedPts;
 
         public AbstractEncoderStreamImpl(B builder, AVFormatContext formatCtx, Consumer<AVPacket> output) {
         	super(output);
@@ -269,6 +278,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             if (builder.enableExperimental) {
             	codecCtx.strict_std_compliance.set(-2);
+            	formatCtx.strict_std_compliance.set(-2);
             }
 
             initCodecCtx(builder);
@@ -289,9 +299,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		abstract void initCodecCtx(B builder);
 
 		protected void submitFrame(AVFrame frame, int duration) {
-			if (frame != null) {
-				frameDurationCache.put(frame.pts.get(), duration);
-			}
 			if (filters == null) {
 				encodeFrame(frame);
 			} else {
@@ -305,19 +312,20 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		}
 
         private void encodeFrame(AVFrame frame) {
-        	logEncoder.atDebug().log(() -> frame == null ? "stream " + streamIndex + ": flush" :  "stream " + streamIndex + ": send frame for encoding, PTS=" + frame.pts.get() + " duration=" + frameDurationCache.get(frame.pts.get()));
+        	logEncoder.atDebug()
+        		.addArgument(streamIndex)
+        		.log(() -> frame == null ? "stream {}: flush" :  "stream {}: send frame for encoding, PTS=" + frame.pts.get());
         	checkcode(libavcodec.avcodec_send_frame(codecCtx, frame));
             // libavutil.av_frame_unref(frame);
             for (;;) {
-//                libavcodec.av_init_packet(packet);
-//				packet.data.set((Pointer) null);
-//				packet.size.set(0);
-
+            	libavcodec.av_init_packet(packet);
                 int res = libavcodec.avcodec_receive_packet(codecCtx, packet);
                 if (res == AVERROR_EAGAIN || res == AVERROR_EOF)
                     break;
                 checkcode(res);
                 packet.stream_index.set(streamIndex);
+
+
 
 //                Integer dur = frameDurationCache.remove(packet.pts.get());
 //                packet.pts.set(codecToStream(packet.pts.get()));
@@ -334,16 +342,21 @@ public class VelvetVideoLib implements IVelvetVideoLib {
                 	.addArgument(() -> packet.size.get())
                 	.log(() -> "encoder: returned packet  PTS/DTS: {}/{}, duration={}, {} bytes");
 
-                Integer dur = frameDurationCache.remove(packet.pts.get());
-        		if ((packet.duration.get() == 0 || packet.duration.get() == AVNOPTS_VALUE)) {
-        			if (dur == null)
-        				dur = 1;
-        			packet.duration.set(dur * defaultFrameDuration);
-    			}
+                fixEncodedPacketPtsDtsDuration();
+        		if (packet.pts.get() != nextExpectedPts) {
+        			logEncoder.atWarn()
+        				.addArgument(nextExpectedPts)
+        				.addArgument(packet.pts.get())
+        				.log("expected PTS mismatch: expected {}, actual {}");
+        		}
+        		nextExpectedPts = packet.pts.get() + packet.duration.get();
                 output.accept(packet);
+
                 libavcodec.av_packet_unref(packet);
             }
         }
+
+		abstract protected void fixEncodedPacketPtsDtsDuration();
 
 		@Override
 		public void close() {
@@ -353,14 +366,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 				libavcodec.avcodec_free_context(new Pointer[] { Struct.getMemory(codecCtx) });
 			}
 			super.close();
-			// libavutil.av_dict_free(new Pointer[] {codecOpts});
-			// libavutil.av_dict_free(new Pointer[] {stream.metadata.get()});
 		}
     }
 
     private class VideoEncoderStreamImpl extends AbstractEncoderStreamImpl<VideoEncoderBuilderImpl> implements IEncoderVideoStream {
 
 		private VideoFrameHolder frameHolder;
+		private final Map<Long, Integer> frameDurationCache = new HashMap<>();
 
 		public VideoEncoderStreamImpl(VideoEncoderBuilderImpl builder, AVFormatContext formatCtx,
 				Consumer<AVPacket> output) {
@@ -378,6 +390,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		@Override
         public void encode(BufferedImage image) {
 			encode(image, 1);
+		}
+
+		@Override
+		protected void submitFrame(AVFrame frame, int duration) {
+			if (frame != null) {
+				frameDurationCache.put(frame.pts.get(), duration);
+			}
+			super.submitFrame(frame, duration);
 		}
 
 		@Override
@@ -413,6 +433,19 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
 		@Override
+		protected void fixEncodedPacketPtsDtsDuration() {
+			Integer dur = frameDurationCache.remove(packet.pts.get());
+			if ((packet.duration.get() == 0 || packet.duration.get() == AVNOPTS_VALUE)) {
+				if (dur == null)
+					dur = 1;
+				packet.duration.set(dur * defaultFrameDuration);
+				logEncoder.atDebug()
+					.addArgument(() -> packet.duration.get())
+					.log(() -> "encoder: duration adjusted to {}");
+			}
+		}
+
+		@Override
 		public void close() {
 			super.close();
 			if (frameHolder != null) {
@@ -427,43 +460,48 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     private class AudioEncoderStreamImpl extends AbstractEncoderStreamImpl<AudioEncoderBuilderImpl> implements IEncoderAudioStream {
 
- 		private final AudioFrameHolder frameHolder;
+ 		private AudioFrameHolder frameHolder;
 		private AudioFormat inputSampleFormat;
-		private AudioFormat codecSampleFormat;
 
 		public AudioEncoderStreamImpl(AudioEncoderBuilderImpl builder, AVFormatContext formatCtx,
  				Consumer<AVPacket> output) {
  			super(builder, formatCtx, output);
- 			frameHolder = new AudioFrameHolder(codecCtx.time_base, true, codecCtx, builder.inputFormat);
+
  		}
 
 		@Override
 		void initCodecCtx(AudioEncoderBuilderImpl builder) {
 
 			this.inputSampleFormat = builder.inputFormat;
-			Set<AudioFormat> supportedFormats = getSampleFormats(codec.sample_fmts.get());
-			AudioFormat codecSampleFormat = new BestMatchingAudioFormatConvertor(supportedFormats).apply(inputSampleFormat);
-			AudioFormat codecAudioFormat = AVSampleFormat.from(codecSampleFormat).toAudioFormat((int)inputSampleFormat.getSampleRate(), inputSampleFormat.getChannels());
+			Set<AVSampleFormat> supportedFormats = codec.sampleFormats();
+			AVSampleFormat codecAVSampleFormat = BestMatchingAudioFormatConvertor.findBest(supportedFormats, inputSampleFormat);
 
-			codecCtx.channels.set(inputSampleFormat.getChannels());
-			codecCtx.channel_layout.set(libavutil.av_get_default_channel_layout(inputSampleFormat.getChannels()));
-			codecCtx.sample_rate.set((int)inputSampleFormat.getSampleRate());
-			codecCtx.sample_fmt.set(AVSampleFormat.from(codecAudioFormat));
-			codecCtx.bit_rate.set(builder.bitrate == null ? 64000 : builder.bitrate); //TODO default audio bit rate ?
+			AudioFormat codecAudioFormat = codecAVSampleFormat.toAudioFormat((int)inputSampleFormat.getSampleRate(), inputSampleFormat.getChannels());
+
+			codecCtx.sample_fmt.set(codecAVSampleFormat);
+			codecCtx.sample_rate.set((int)codecAudioFormat.getSampleRate());
+			codecCtx.channels.set(codecAudioFormat.getChannels());
+			codecCtx.channel_layout.set(libavutil.av_get_default_channel_layout(codecAudioFormat.getChannels()));
+			codecCtx.bit_rate.set(builder.bitrate == null ? 128 * 1024 : builder.bitrate); //TODO default audio bit rate ?
 
 			checkcode(libavcodec.avcodec_open2(codecCtx, codecCtx.codec.get(), new Pointer[]{codecOpts}));
+			frameHolder = new AudioFrameHolder(codecCtx.time_base, true, codecCtx, builder.inputFormat);
 			this.codecOpened = true;
 		}
 
-		private Set<AudioFormat> getSampleFormats(Pointer sample_fmts) {
-			Set<AudioFormat> formats = new HashSet<>();
-			for (int offset = 0;;) {
-				int val = sample_fmts.getInt(offset);
-				if (val == -1)
-					return formats;
-				formats.add(AVSampleFormat.values()[val].toAudioFormat(-1, 0));
-				offset += 4;
-			}
+		@Override
+		protected void fixEncodedPacketPtsDtsDuration() {
+			//long dur = packet.duration.get();
+			//if (dur == codecCtx.frame_size.get() && (codecCtx.time_base.den.get() != stream.time_base.den.get() || codecCtx.time_base.num.get() != stream.time_base.num.get())) {
+			//	logEncoder.atWarn().log("duration not converted");
+				packet.pts.set(codecToStream(packet.pts.get()));
+				packet.dts.set(codecToStream(packet.dts.get()));
+				packet.duration.set(codecToStream(packet.duration.get()));
+			//}
+		}
+
+		private long codecToStream(long dur) {
+			return dur * stream.time_base.den.get() * codecCtx.time_base.num.get() / (stream.time_base.num.get() * codecCtx.time_base.den.get());
 		}
 
 		@Override
@@ -771,7 +809,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             public int seek(Pointer opaque, int offset, int whence) {
 
                 final int SEEK_SET = 0;   /* set file offset to offset */
-                final int SEEK_CUR = 1;   /* set file offset to current plus offset */
+                // final int SEEK_CUR = 1;   /* set file offset to current plus offset */
                 final int SEEK_END = 2;   /* set file offset to EOF plus offset */
                 final int AVSEEK_SIZE = 0x10000;   /* set file offset to EOF plus offset */
 
@@ -788,7 +826,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
         @Override
-		public IDecodedPacket nextPacket() {
+		public IDecodedPacket<?> nextPacket() {
         	return Feeder.next(this::nextRawPacket, this::decodePacket);
         }
 
@@ -808,18 +846,19 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 				.addArgument(packet.pts.get())
 				.addArgument(packet.dts.get())
 				.addArgument(packet.duration.get())
-				.log(() -> "stream {}: read packet PTS/DTS={}/{} duration={}");
+				.addArgument(packet.size.get())
+				.log(() -> "stream {}: read packet PTS/DTS={}/{} duration={} size={} bytes");
 			return packet;
         }
 
         @Override
-        public Stream<IDecodedPacket> stream() {
+        public Stream<IDecodedPacket<?>> stream() {
         	// return Stream.generate(this::nextPacket).takeWhile(el -> el != null);
         	return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator(), Spliterator.ORDERED), false);
         }
 
         @Override
-        public Iterator<IDecodedPacket> iterator() {
+        public Iterator<IDecodedPacket<?>> iterator() {
         	return iteratorFromSupplier(this::nextPacket);
         }
 
@@ -827,7 +866,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         /**
 		 * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
 		 */
-		private IDecodedPacket decodePacket(AVPacket p) {
+		private IDecodedPacket<?> decodePacket(AVPacket p) {
 			if (p != null) {
 				return decodeRawPacket(p);
 			} else {
@@ -835,7 +874,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			}
 		}
 
-		private IDecodedPacket decodeRawPacket(AVPacket p) {
+		private IDecodedPacket<?> decodeRawPacket(AVPacket p) {
 			int index = p.stream_index.get();
 			DecoderVideoStreamImpl videoStream = indexToVideoStream.get(index);
 			if (videoStream != null)
@@ -844,14 +883,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			if (audioStream != null)
 				return audioStream.decodePacket(p);
 			logDemuxer.atWarn().addArgument(index).log("received packet of unknown stream {}");
-			return new UnknownDecodedPacket(packet.bytes());
+			return new UnknownPacket();
 		}
 
-		private IDecodedPacket flushNextStream() {
+		private IDecodedPacket<?> flushNextStream() {
 			for (; flushStreamIndex < allStreams.size(); flushStreamIndex++) {
 				logDemuxer.atDebug().addArgument(flushStreamIndex).log(() -> "flushing demuxer stream={}");
 				AbstractDecoderStream stream = allStreams.get(flushStreamIndex);
-				IDecodedPacket packet = stream.decodePacket(null);
+				IDecodedPacket<?> packet = stream.decodePacket(null);
 				if (packet != null) {
 					return packet;
 				}
@@ -882,10 +921,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 			@Override
 			public IVideoFrame nextFrame() {
-				IDecodedPacket packet;
+				IDecodedPacket<?> packet;
 				while((packet = nextPacket()) != null) {
-					if (packet.isVideo() && packet.video().stream() == this) {
-						return packet.video();
+					if (packet.is(MediaType.Video) && packet.stream() == this) {
+						return packet.asVideo();
 					}
 				}
 				return null;
@@ -931,10 +970,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 			@Override
 			public IAudioFrame nextFrame() {
-				IDecodedPacket packet;
+				IDecodedPacket<?> packet;
 				while((packet = nextPacket()) != null) {
-					if (packet.isAudio() && packet.audio().stream() == this) {
-						return packet.audio();
+					if (packet.is(MediaType.Audio) && packet.stream() == this) {
+						return packet.asAudio();
 					}
 				}
 				return null;
@@ -984,7 +1023,6 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             private final String name;
 
-
             protected IFrameHolder frameHolder;
             private final int index;
             private long skipToPts = -1;
@@ -1010,7 +1048,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             /**
              * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
              */
-            IDecodedPacket decodePacket(AVPacket pack) {
+            IDecodedPacket<?> decodePacket(AVPacket pack) {
             	for (;;) {
 	            	AVFrame frame = feedPacket(pack);
 	            	if (filters != null) {
@@ -1039,7 +1077,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 	                    }
 	                    skipToPts = -1;
 	                }
-	                IDecodedPacket decodedPacket = frameHolder.decode(frame, this);
+	                IDecodedPacket<?> decodedPacket = frameHolder.decode(frame, this);
 	                if (filters !=null)
 	                	libavutil.av_frame_unref(frame);
 	                return decodedPacket;
@@ -1099,7 +1137,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             }
 
 			private void seekToPts(long pts) {
-				checkcode(libavformat.av_seek_frame(formatCtx, this.index, pts, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD));
+				checkcode(libavformat.av_seek_frame(formatCtx, this.index, pts, LibAVFormat.AVSEEK_FLAG_FRAME | LibAVFormat.AVSEEK_FLAG_BACKWARD));
                 libavcodec.avcodec_flush_buffers(codecCtx);
                 this.skipToPts  = pts;
                 flushStreamIndex = 0;
@@ -1231,8 +1269,25 @@ class VideoStreamProperties implements IVideoStreamProperties {
     private final int height;
 }
 
-@Accessors(fluent = true)
-@RequiredArgsConstructor
-class UnknownDecodedPacket implements IDecodedPacket {
-	private final byte[] bytes;
+class UnknownPacket implements IDecodedPacket<IDecoderStream<?, ?, ?>> {
+
+	@Override
+	public IDecoderStream<?, ?, ?> stream() {
+		return null;
+	}
+
+	@Override
+	public MediaType type() {
+		return null;
+	}
+
+	@Override
+	public long nanostamp() {
+		return 0;
+	}
+
+	@Override
+	public long nanoduration() {
+		return 0;
+	}
 }

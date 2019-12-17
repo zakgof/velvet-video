@@ -5,7 +5,6 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 
-import com.zakgof.velvetvideo.IDecodedPacket;
 import com.zakgof.velvetvideo.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoFrame;
 import com.zakgof.velvetvideo.VelvetVideoException;
@@ -79,30 +78,8 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 	}
 
 	@Override
-	public void close() {
-		libavutil.av_frame_free(new Pointer[] { Struct.getMemory(frame) });
-		libavutil.av_frame_free(new Pointer[] { Struct.getMemory(biframe) });
-		libswscale.sws_freeContext(scaleCtx);
-	}
-
-	@Override
-	public IDecodedPacket decode(AVFrame frame, DemuxerImpl.AbstractDecoderStream stream) {
-		return new DecodedVideoPacket(frameOf(getPixels(frame), stream));
-	}
-
-	@Override
-	public long pts() {
-		// TODO DRY
-		return frame.pts.get();
-	}
-
-	@Override
-	public AVFrame frame() {
-		// TODO DRY - abstract class
-		return frame;
-	}
-
-	private IVideoFrame frameOf(BufferedImage bi, DemuxerImpl.AbstractDecoderStream stream) {
+	public IVideoFrame decode(AVFrame frame, DemuxerImpl.AbstractDecoderStream stream) {
+		BufferedImage bi = getPixels(frame);
 		long pts = pts();
 		if (pts == LibAVUtil.AVNOPTS_VALUE) {
 			pts = 0;
@@ -111,6 +88,19 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 		long duration = libavutil.av_frame_get_pkt_duration(frame);
 		long nanoduration = duration * 1000000000L * timebase.num.get() / timebase.den.get();
 		return new VideoFrameImpl(bi, nanostamp, nanoduration, (IDecoderVideoStream) stream);
+	}
+
+	@Override
+	public AVFrame frame() {
+		// TODO DRY - abstract class
+		return frame;
+	}
+
+	@Override
+	public void close() {
+		libavutil.av_frame_free(new Pointer[] { Struct.getMemory(frame) });
+		libavutil.av_frame_free(new Pointer[] { Struct.getMemory(biframe) });
+		libswscale.sws_freeContext(scaleCtx);
 	}
 
 }

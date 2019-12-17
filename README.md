@@ -5,8 +5,8 @@ With velvet-video it's easy to:
 - create video from still images
 - extract frames from a video
 - extract audio tracks from video files
-- remux video or audio from one format to another
-- transcode (recompress) videos/audios using another codec
+- remux video or audio from one container format to another (like mp4 to mkv)
+- transcode (recompress) videos/audios using another codec (like x264 to vp9 or wav to mp3)
 - change video timing (slo-mo, timelapse etc)
 - merge videos or split them to segments
 - apply filters of transformations (before encoding or after decoding)
@@ -44,8 +44,8 @@ The choice for native package is:
 ### gradle
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video:0.3.0'
-    compile 'com.github.zakgof:velvet-video-natives:0.2.1.full'
+    compile 'com.github.zakgof:velvet-video:0.3.7'
+    compile 'com.github.zakgof:velvet-video-natives:0.2.6.full'
 }
 ````
 ### maven
@@ -53,7 +53,7 @@ dependencies {
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video</artifactId>
-  <version>0.3.2</version>
+  <version>0.3.7</version>
   <type>pom</type>
 </dependency>
 <dependency>

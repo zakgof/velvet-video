@@ -3,10 +3,8 @@ package com.zakgof.velvetvideo.impl.middle;
 import javax.sound.sampled.AudioFormat;
 
 import com.zakgof.velvetvideo.IAudioFrame;
-import com.zakgof.velvetvideo.IDecodedPacket;
 import com.zakgof.velvetvideo.IDecoderAudioStream;
 import com.zakgof.velvetvideo.impl.JNRHelper;
-import com.zakgof.velvetvideo.impl.VelvetVideoLib.DemuxerImpl;
 import com.zakgof.velvetvideo.impl.VelvetVideoLib.DemuxerImpl.AbstractDecoderStream;
 import com.zakgof.velvetvideo.impl.jnr.AVCodecContext;
 import com.zakgof.velvetvideo.impl.jnr.AVFrame;
@@ -32,7 +30,6 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 	private Pointer[] userBuffer;
 	private int userBufferSamplesSize;
 	private int frameSamples;
-	private long nextPts;
 	private int bytesPerSample;
 
     public AudioFrameHolder(AVRational timebase, boolean encode, AVCodecContext codecCtx, AudioFormat userFormat) {
@@ -49,6 +46,7 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 			frame.nb_samples.set(frameSamples);
 			frame.format.set(codecCtx.sample_fmt.longValue());
 			frame.channel_layout.set(codecCtx.channel_layout.get());
+			frame.sample_rate.set((int)userFormat.getSampleRate());
 			libavutil.checkcode(libavutil.av_frame_get_buffer(frame, 0));
 		}
 	}
@@ -75,7 +73,6 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 	}
 
 	private byte[] samples(AVFrame frame) {
-		System.err.println("samples() " + frame.nb_samples.get());
 		reallocUserBuffer(frame.nb_samples.get());
 		int frame_count = libavresample.swr_convert(swrContext, userBuffer, userBufferSamplesSize, JNRHelper.ptr(frame.data[0]), userBufferSamplesSize);
     	int bytesCount = frame_count * bytesPerSample;
@@ -86,7 +83,7 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 
 	private void reallocUserBuffer(int size) {
 		if (size != userBufferSamplesSize) {
-			if (this.userBuffer != null) {
+			if (this.userBuffer[0] != null) {
 				 libavutil.av_freep(userBuffer);
 			}
 			userBufferSamplesSize = size;
@@ -118,61 +115,21 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
     }
 
 	@Override
-	public long pts() {
-		// TODO
-		return frame.pts.get();
-	}
-
-	@Override
 	public AVFrame frame() {
 		// TODO
 		return frame;
 	}
 
 	@Override
-	public IDecodedPacket decode(AVFrame frame, AbstractDecoderStream stream) {
-		return new DecodedAudioPacket(frameOf(stream, frame));
-	}
-
-	private IAudioFrame frameOf(DemuxerImpl.AbstractDecoderStream stream, AVFrame frame) {
+	public IAudioFrame decode(AVFrame frame, AbstractDecoderStream stream) {
 		long pts = pts();
 		if (pts == LibAVUtil.AVNOPTS_VALUE) {
 			pts = 0;
 		}
 		long duration = libavutil.av_frame_get_pkt_duration(frame);
 		byte[] samples = samples(frame);
-
-//		if (pts > nextPts) {
-//			System.err.println("BAD PTS: GAP " + nextPts + " --> " + pts); // TODO
-//			int offset = (int) (pts - nextPts);
-//			int bytepadding = offset * bytesPerSample;
-//			byte[] oldsamples = samples;
-//			samples = new byte[bytepadding + oldsamples.length];
-//			System.arraycopy(oldsamples, 0, samples, bytepadding, oldsamples.length);
-//			duration += offset;
-//		}
-//		if (pts < nextPts) {
-//			// TODO: log warning
-//			long offset = nextPts - pts;
-//			System.err.println("BAD PTS: OVERLAP " + nextPts + " --> " + pts); // TODO
-//			if (samples.length < offset * bytesPerSample) {
-//				samples = new byte[] {};
-//				duration = 0;
-//			} else {
-//				samples = Arrays.copyOfRange(samples, (int) (offset * bytesPerSample), samples.length);
-//				duration = duration - offset;
-//			}
-//			pts = nextPts;
-//
-//			System.err.println("FIXING PTS !!!!");
-//		}
-
 		long nanostamp = pts * 1000000000L * timebase.num.get() / timebase.den.get();
-		nextPts = pts + duration;
 		long nanoduration = duration * 1000000000L * timebase.num.get() / timebase.den.get();
 		return new AudioFrameImpl(samples, nanostamp, nanoduration, (IDecoderAudioStream)stream);
 	}
-
-
-
 }

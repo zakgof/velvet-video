@@ -62,4 +62,8 @@ public enum AVSampleFormat {
 	public static AVSampleFormat from(AudioFormat targetFormat) {
 		return Arrays.stream(values()).filter(sf -> sf.encoding == targetFormat.getEncoding() && sf.sampleSizeInBits == targetFormat.getSampleSizeInBits() && !sf.planar).findFirst().get();
 	}
+
+	public boolean planar() {
+		return planar;
+	}
 }

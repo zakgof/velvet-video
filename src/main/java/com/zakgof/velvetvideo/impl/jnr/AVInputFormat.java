@@ -2,7 +2,6 @@ package com.zakgof.velvetvideo.impl.jnr;
 
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
-import jnr.ffi.Struct.AsciiStringRef;
 
 public class AVInputFormat extends Struct {
     public AVInputFormat(Runtime runtime) {

@@ -2,8 +2,6 @@ package com.zakgof.velvetvideo.impl.jnr;
 
 import jnr.ffi.Runtime;
 import jnr.ffi.Struct;
-import jnr.ffi.Struct.String;
-import jnr.ffi.Struct.UTF8StringRef;
 
 public class AVDictionaryEntry extends Struct {
     public AVDictionaryEntry(Runtime runtime) {

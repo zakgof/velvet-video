@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-public interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket> {
+public interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket<?>> {
 	@Override
 	void close();
 
@@ -17,17 +17,14 @@ public interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket> {
 
 	IDecoderAudioStream audioStream(int index);
 
-	IDecodedPacket nextPacket();
-
 	Map<String, String> metadata();
 
 	IMuxerProperties properties();
 
-	Stream<IDecodedPacket> stream();
+	IDecodedPacket<?> nextPacket();
+
+	Stream<IDecodedPacket<?>> stream();
 
 	@Override
-	Iterator<IDecodedPacket> iterator();
-
-
-
+	Iterator<IDecodedPacket<?>> iterator();
 }
