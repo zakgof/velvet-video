@@ -44,7 +44,7 @@ The choice for native package is:
 ### gradle
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video:0.3.7'
+    compile 'com.github.zakgof:velvet-video:0.4.0'
     compile 'com.github.zakgof:velvet-video-natives:0.2.6.full'
 }
 ````
@@ -53,7 +53,7 @@ dependencies {
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video</artifactId>
-  <version>0.3.7</version>
+  <version>0.4.0</version>
   <type>pom</type>
 </dependency>
 <dependency>
@@ -69,19 +69,20 @@ dependencies {
 ### Encode images into a video:
 
 ````java
-    IVelvetVideoLib lib = new VelvetVideoLib();
+    IVelvetVideoLib lib = VelvetVideoLib().getInstance();
     try (IMuxer muxer = lib.muxer("matroska")
-        .video(lib.videoEncoder("libaom-av1").bitrate(100000))
-        .build(new File("/some/path/output.mkv"))) {            
-           muxer.video(0).encode(image1, 0);
-           muxer.video(0).encode(image2, 1);
-           muxer.video(0).encode(image3, 2);
+        .video(lib.videoEncoder("libaom-av1").bitrate(800000))
+        .build(new File("/some/path/output.mkv"))) {
+             IEncoderVideoStream videoStream = muxer.videoStream(0);	        
+             videoStream.encode(image1);
+             videoStream.encode(image2);
+             videoStream.encode(image3);
     }      
 ````
 ### Obtain images from a video:
 
 ````java
-	IVelvetVideoLib lib = new VelvetVideoLib();
+	IVelvetVideoLib lib = VelvetVideoLib().getInstance();
 	try (IDemuxer demuxer = lib.demuxer(new File("/some/path/example.mp4"))) {
 	    IDecoderVideoStream videoStream = demuxer.videoStream(0);
 	    IFrame videoFrame;
@@ -91,8 +92,14 @@ dependencies {
 	    }
 	}      
 ````
+### More examples
 
-### Play a video file
+ - Extract audio from mkv file as mp3
+ - Play audio file
+ 
+ https://github.com/zakgof/velvet-video/tree/master/src/example/java/com/zakgof/velvetvideo/example
+
+### Advanced example: video player
 
 See https://github.com/zakgof/velvet-video-player
 
