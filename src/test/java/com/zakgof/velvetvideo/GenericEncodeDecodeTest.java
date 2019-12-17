@@ -33,9 +33,8 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
         System.err.println("[0] to [1] " + dff);
         try (IDemuxer demuxer = lib.demuxer(file)) {
             int i = 0;
-			for (IDecodedPacket packet : demuxer) {
+			for (IVideoFrame frame : demuxer.videoStream(0)) {
 				Assertions.assertTrue(i < FRAMES);
-				IVideoFrame frame = packet.video();
 				BufferedImage imgrestored = frame.image();
 				double diff = diff(orig[i], imgrestored);
 				System.err.println("Diff for frame " + i + " = " + diff);
@@ -56,15 +55,15 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 		int bwindex = 0;
 
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			for (IDecodedPacket packet : demuxer) {
-				if (packet.video().stream().name().equals("color")) {
-					BufferedImage imgrestored = packet.video().image();
+			for (IDecodedPacket<?> packet : demuxer) {
+				if (packet.asVideo().stream().name().equals("color")) {
+					BufferedImage imgrestored = packet.asVideo().image();
 					double diff = diff(origs[0][colorindex], imgrestored);
 					Assertions.assertEquals(0, diff, 10.0, "Color frame " + colorindex + " differs by " + diff);
 					colorindex++;
 				}
-				if (packet.video().stream().name().equals("bw")) {
-					BufferedImage imgrestored = packet.video().image();
+				if (packet.asVideo().stream().name().equals("bw")) {
+					BufferedImage imgrestored = packet.asVideo().image();
 					double diff = diff(origs[1][bwindex], imgrestored);
 					Assertions.assertEquals(0, diff, 10.0, "BW rame " + bwindex + " differs by " + diff);
 					bwindex++;

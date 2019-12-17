@@ -3,10 +3,8 @@ package com.zakgof.velvetvideo.impl.middle;
 import javax.sound.sampled.AudioFormat;
 
 import com.zakgof.velvetvideo.IAudioFrame;
-import com.zakgof.velvetvideo.IDecodedPacket;
 import com.zakgof.velvetvideo.IDecoderAudioStream;
 import com.zakgof.velvetvideo.impl.JNRHelper;
-import com.zakgof.velvetvideo.impl.VelvetVideoLib.DemuxerImpl;
 import com.zakgof.velvetvideo.impl.VelvetVideoLib.DemuxerImpl.AbstractDecoderStream;
 import com.zakgof.velvetvideo.impl.jnr.AVCodecContext;
 import com.zakgof.velvetvideo.impl.jnr.AVFrame;
@@ -75,7 +73,6 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 	}
 
 	private byte[] samples(AVFrame frame) {
-		System.err.println("samples() " + frame.nb_samples.get());
 		reallocUserBuffer(frame.nb_samples.get());
 		int frame_count = libavresample.swr_convert(swrContext, userBuffer, userBufferSamplesSize, JNRHelper.ptr(frame.data[0]), userBufferSamplesSize);
     	int bytesCount = frame_count * bytesPerSample;
@@ -124,11 +121,7 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 	}
 
 	@Override
-	public IDecodedPacket decode(AVFrame frame, AbstractDecoderStream stream) {
-		return new DecodedAudioPacket(frameOf(stream, frame));
-	}
-
-	private IAudioFrame frameOf(DemuxerImpl.AbstractDecoderStream stream, AVFrame frame) {
+	public IAudioFrame decode(AVFrame frame, AbstractDecoderStream stream) {
 		long pts = pts();
 		if (pts == LibAVUtil.AVNOPTS_VALUE) {
 			pts = 0;
@@ -139,5 +132,4 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 		long nanoduration = duration * 1000000000L * timebase.num.get() / timebase.den.get();
 		return new AudioFrameImpl(samples, nanostamp, nanoduration, (IDecoderAudioStream)stream);
 	}
-
 }

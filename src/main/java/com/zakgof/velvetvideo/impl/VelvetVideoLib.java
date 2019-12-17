@@ -826,7 +826,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
         @Override
-		public IDecodedPacket nextPacket() {
+		public IDecodedPacket<?> nextPacket() {
         	return Feeder.next(this::nextRawPacket, this::decodePacket);
         }
 
@@ -852,13 +852,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
         @Override
-        public Stream<IDecodedPacket> stream() {
+        public Stream<IDecodedPacket<?>> stream() {
         	// return Stream.generate(this::nextPacket).takeWhile(el -> el != null);
         	return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator(), Spliterator.ORDERED), false);
         }
 
         @Override
-        public Iterator<IDecodedPacket> iterator() {
+        public Iterator<IDecodedPacket<?>> iterator() {
         	return iteratorFromSupplier(this::nextPacket);
         }
 
@@ -866,7 +866,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         /**
 		 * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
 		 */
-		private IDecodedPacket decodePacket(AVPacket p) {
+		private IDecodedPacket<?> decodePacket(AVPacket p) {
 			if (p != null) {
 				return decodeRawPacket(p);
 			} else {
@@ -874,7 +874,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			}
 		}
 
-		private IDecodedPacket decodeRawPacket(AVPacket p) {
+		private IDecodedPacket<?> decodeRawPacket(AVPacket p) {
 			int index = p.stream_index.get();
 			DecoderVideoStreamImpl videoStream = indexToVideoStream.get(index);
 			if (videoStream != null)
@@ -883,14 +883,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			if (audioStream != null)
 				return audioStream.decodePacket(p);
 			logDemuxer.atWarn().addArgument(index).log("received packet of unknown stream {}");
-			return new UnknownDecodedPacket(packet.bytes());
+			return new UnknownPacket();
 		}
 
-		private IDecodedPacket flushNextStream() {
+		private IDecodedPacket<?> flushNextStream() {
 			for (; flushStreamIndex < allStreams.size(); flushStreamIndex++) {
 				logDemuxer.atDebug().addArgument(flushStreamIndex).log(() -> "flushing demuxer stream={}");
 				AbstractDecoderStream stream = allStreams.get(flushStreamIndex);
-				IDecodedPacket packet = stream.decodePacket(null);
+				IDecodedPacket<?> packet = stream.decodePacket(null);
 				if (packet != null) {
 					return packet;
 				}
@@ -921,10 +921,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 			@Override
 			public IVideoFrame nextFrame() {
-				IDecodedPacket packet;
+				IDecodedPacket<?> packet;
 				while((packet = nextPacket()) != null) {
-					if (packet.isVideo() && packet.video().stream() == this) {
-						return packet.video();
+					if (packet.is(MediaType.Video) && packet.stream() == this) {
+						return packet.asVideo();
 					}
 				}
 				return null;
@@ -970,10 +970,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 			@Override
 			public IAudioFrame nextFrame() {
-				IDecodedPacket packet;
+				IDecodedPacket<?> packet;
 				while((packet = nextPacket()) != null) {
-					if (packet.isAudio() && packet.audio().stream() == this) {
-						return packet.audio();
+					if (packet.is(MediaType.Audio) && packet.stream() == this) {
+						return packet.asAudio();
 					}
 				}
 				return null;
@@ -1048,7 +1048,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             /**
              * @return null means "PACKET HAS NO OUTPUT DATA, GET NEXT PACKET"
              */
-            IDecodedPacket decodePacket(AVPacket pack) {
+            IDecodedPacket<?> decodePacket(AVPacket pack) {
             	for (;;) {
 	            	AVFrame frame = feedPacket(pack);
 	            	if (filters != null) {
@@ -1077,7 +1077,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 	                    }
 	                    skipToPts = -1;
 	                }
-	                IDecodedPacket decodedPacket = frameHolder.decode(frame, this);
+	                IDecodedPacket<?> decodedPacket = frameHolder.decode(frame, this);
 	                if (filters !=null)
 	                	libavutil.av_frame_unref(frame);
 	                return decodedPacket;
@@ -1269,8 +1269,25 @@ class VideoStreamProperties implements IVideoStreamProperties {
     private final int height;
 }
 
-@Accessors(fluent = true)
-@RequiredArgsConstructor
-class UnknownDecodedPacket implements IDecodedPacket {
-	private final byte[] bytes;
+class UnknownPacket implements IDecodedPacket<IDecoderStream<?, ?, ?>> {
+
+	@Override
+	public IDecoderStream<?, ?, ?> stream() {
+		return null;
+	}
+
+	@Override
+	public MediaType type() {
+		return null;
+	}
+
+	@Override
+	public long nanostamp() {
+		return 0;
+	}
+
+	@Override
+	public long nanoduration() {
+		return 0;
+	}
 }

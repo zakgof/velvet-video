@@ -72,9 +72,9 @@ public class VarTimingTest extends VelvetVideoTest {
 			IVideoStreamProperties properties = demuxer.videoStream(0).properties();
 			// Read and check MP4 frames
 			for (int i=0; i<FRAMES; i++) {
-				IDecodedPacket packet = demuxer.nextPacket();
+				IDecodedPacket<?> packet = demuxer.nextPacket();
 				Assertions.assertNotNull(packet, "Frame " + i + " n'existe pas");
-				IVideoFrame frame = packet.video();
+				IVideoFrame frame = packet.asVideo();
 			//	Assertions.assertEquals(40000000L * (i+1), frame.nanoduration());
 				Assertions.assertEquals(40000000L * (i+1)*i/2, frame.nanostamp(), "Bad stamp for frame " + i);
 				assertEqual(orig[i], frame.image(), 10);

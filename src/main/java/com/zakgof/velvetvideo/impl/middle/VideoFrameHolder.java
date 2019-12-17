@@ -5,7 +5,6 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 
-import com.zakgof.velvetvideo.IDecodedPacket;
 import com.zakgof.velvetvideo.IDecoderVideoStream;
 import com.zakgof.velvetvideo.IVideoFrame;
 import com.zakgof.velvetvideo.VelvetVideoException;
@@ -79,17 +78,8 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 	}
 
 	@Override
-	public IDecodedPacket decode(AVFrame frame, DemuxerImpl.AbstractDecoderStream stream) {
-		return new DecodedVideoPacket(frameOf(getPixels(frame), stream));
-	}
-
-	@Override
-	public AVFrame frame() {
-		// TODO DRY - abstract class
-		return frame;
-	}
-
-	private IVideoFrame frameOf(BufferedImage bi, DemuxerImpl.AbstractDecoderStream stream) {
+	public IVideoFrame decode(AVFrame frame, DemuxerImpl.AbstractDecoderStream stream) {
+		BufferedImage bi = getPixels(frame);
 		long pts = pts();
 		if (pts == LibAVUtil.AVNOPTS_VALUE) {
 			pts = 0;
@@ -100,6 +90,11 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 		return new VideoFrameImpl(bi, nanostamp, nanoduration, (IDecoderVideoStream) stream);
 	}
 
+	@Override
+	public AVFrame frame() {
+		// TODO DRY - abstract class
+		return frame;
+	}
 
 	@Override
 	public void close() {

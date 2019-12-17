@@ -12,7 +12,7 @@ public interface IFrameHolder extends AutoCloseable {
 
 	AVFrame frame();
 
-	IDecodedPacket decode(AVFrame frame, AbstractDecoderStream stream);
+	IDecodedPacket<?> decode(AVFrame frame, AbstractDecoderStream stream);
 
 	@Override
 	void close();

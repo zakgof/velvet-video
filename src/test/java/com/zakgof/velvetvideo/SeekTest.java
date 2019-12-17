@@ -55,8 +55,8 @@ public class SeekTest extends VelvetVideoTest {
 		createSingleStreamVideo(codec, format, file, FRAMES);
 		List<BufferedImage> rest1 = new ArrayList<>(FRAMES);
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			for (IDecodedPacket packet : demuxer) {
-				rest1.add(packet.video().image());
+			for (IDecodedPacket<?> packet : demuxer) {
+				rest1.add(packet.asVideo().image());
 			}
 		}
 
@@ -111,12 +111,12 @@ public class SeekTest extends VelvetVideoTest {
 		List<BufferedImage> restbw = new ArrayList<>(FRAMES);
 
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			for (IDecodedPacket packet : demuxer) {
-				int streamIndex = packet.video().stream().index();
+			for (IDecodedPacket<?> packet : demuxer) {
+				int streamIndex = packet.asVideo().stream().index();
 				if (streamIndex == 0) {
-					restcolor.add(packet.video().image());
+					restcolor.add(packet.asVideo().image());
 				} else  {
-					restbw.add(packet.video().image());
+					restbw.add(packet.asVideo().image());
 				}
 			}
 		}

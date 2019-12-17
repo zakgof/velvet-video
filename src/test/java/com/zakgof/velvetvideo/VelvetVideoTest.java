@@ -40,11 +40,13 @@ public class VelvetVideoTest {
 	}
 
 //	@AfterAll
+	@SuppressWarnings("unused")
 	private static void cleanup() {
 		dir.toFile().delete();
 	}
 
 //	@AfterEach
+	@SuppressWarnings("unused")
 	private void clean() {
 		for (File file : dir.toFile().listFiles())
 			file.delete();
@@ -198,8 +200,8 @@ public class VelvetVideoTest {
 		List<BufferedImage> restored = new ArrayList<>(frames);
 		try (IDemuxer demuxer = lib.demuxer(file)) {
 			demuxer.videoStream(0).setFilter(filter);
-			for (IDecodedPacket packet : demuxer) {
-				restored.add(packet.video().image());
+			for (IDecodedPacket<?> packet : demuxer) {
+				restored.add(packet.asVideo().image());
 			}
 		}
 		Assertions.assertEquals(frames, restored.size());
