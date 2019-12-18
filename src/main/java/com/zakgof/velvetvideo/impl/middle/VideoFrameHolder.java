@@ -5,7 +5,7 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
 import java.awt.image.Raster;
 
-import com.zakgof.velvetvideo.IDecoderVideoStream;
+import com.zakgof.velvetvideo.IVideoDecoderStream;
 import com.zakgof.velvetvideo.IVideoFrame;
 import com.zakgof.velvetvideo.VelvetVideoException;
 import com.zakgof.velvetvideo.impl.JNRHelper;
@@ -87,7 +87,7 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 		long nanostamp = pts * 1000000000L * timebase.num.get() / timebase.den.get();
 		long duration = libavutil.av_frame_get_pkt_duration(frame);
 		long nanoduration = duration * 1000000000L * timebase.num.get() / timebase.den.get();
-		return new VideoFrameImpl(bi, nanostamp, nanoduration, (IDecoderVideoStream) stream);
+		return new VideoFrameImpl(bi, nanostamp, nanoduration, (IVideoDecoderStream) stream);
 	}
 
 	@Override

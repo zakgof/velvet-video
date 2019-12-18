@@ -1,6 +1,6 @@
 package com.zakgof.velvetvideo;
 
-public interface IAudioFrame extends IDecodedPacket<IDecoderAudioStream> {
+public interface IAudioFrame extends IDecodedPacket<IAudioDecoderStream> {
 	byte[] samples();
 
 	@Override

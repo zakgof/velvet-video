@@ -31,12 +31,12 @@ import com.zakgof.velvetvideo.IAudioEncoderBuilder;
 import com.zakgof.velvetvideo.IAudioFrame;
 import com.zakgof.velvetvideo.IAudioStreamProperties;
 import com.zakgof.velvetvideo.IDecodedPacket;
-import com.zakgof.velvetvideo.IDecoderAudioStream;
+import com.zakgof.velvetvideo.IAudioDecoderStream;
 import com.zakgof.velvetvideo.IDecoderStream;
-import com.zakgof.velvetvideo.IDecoderVideoStream;
+import com.zakgof.velvetvideo.IVideoDecoderStream;
 import com.zakgof.velvetvideo.IDemuxer;
-import com.zakgof.velvetvideo.IEncoderAudioStream;
-import com.zakgof.velvetvideo.IEncoderVideoStream;
+import com.zakgof.velvetvideo.IAudioEncoderStream;
+import com.zakgof.velvetvideo.IVideoEncoderStream;
 import com.zakgof.velvetvideo.IMuxer;
 import com.zakgof.velvetvideo.IMuxerBuilder;
 import com.zakgof.velvetvideo.IMuxerProperties;
@@ -369,7 +369,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 		}
     }
 
-    private class VideoEncoderStreamImpl extends AbstractEncoderStreamImpl<VideoEncoderBuilderImpl> implements IEncoderVideoStream {
+    private class VideoEncoderStreamImpl extends AbstractEncoderStreamImpl<VideoEncoderBuilderImpl> implements IVideoEncoderStream {
 
 		private VideoFrameHolder frameHolder;
 		private final Map<Long, Integer> frameDurationCache = new HashMap<>();
@@ -458,7 +458,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
     }
 
-    private class AudioEncoderStreamImpl extends AbstractEncoderStreamImpl<AudioEncoderBuilderImpl> implements IEncoderAudioStream {
+    private class AudioEncoderStreamImpl extends AbstractEncoderStreamImpl<AudioEncoderBuilderImpl> implements IAudioEncoderStream {
 
  		private AudioFrameHolder frameHolder;
 		private AudioFormat inputSampleFormat;
@@ -673,13 +673,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
 		@Override
-		public IEncoderVideoStream videoEncoder(int index) {
+		public IVideoEncoderStream videoEncoder(int index) {
 			return videoStreams.stream().filter(vs -> vs.streamIndex == index).findFirst()
 					.orElseThrow(() -> new VelvetVideoException("No video stream found with index " + index));
 		}
 
 		@Override
-		public IEncoderAudioStream audioEncoder(int index) {
+		public IAudioEncoderStream audioEncoder(int index) {
 			return audioStreams.stream().filter(vs -> vs.streamIndex == index).findFirst()
 					.orElseThrow(() -> new VelvetVideoException("No audio stream found with index " + index));
 		}
@@ -898,7 +898,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			return null;
 		}
 
-		private class DecoderVideoStreamImpl extends AbstractDecoderStream implements IDecoderVideoStream {
+		private class DecoderVideoStreamImpl extends AbstractDecoderStream implements IVideoDecoderStream {
 
 			public DecoderVideoStreamImpl(AVStream avstream, String name) {
 				super(avstream, name);
@@ -936,13 +936,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			}
 
 			@Override
-			public IDecoderVideoStream seek(long frameNumber) {
+			public IVideoDecoderStream seek(long frameNumber) {
 				seekToFrame(frameNumber);
 				return this;
 			}
 
 			@Override
-			public IDecoderVideoStream seekNano(long ns) {
+			public IVideoDecoderStream seekNano(long ns) {
 				seekToNano(ns);
 				return this;
 			}
@@ -954,7 +954,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
 		}
 
-		private class DecoderAudioStreamImpl extends AbstractDecoderStream implements IDecoderAudioStream {
+		private class DecoderAudioStreamImpl extends AbstractDecoderStream implements IAudioDecoderStream {
 
 			private final AudioFormat targetFormat;
 
@@ -996,13 +996,13 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			}
 
 			@Override
-			public IDecoderAudioStream seek(long frameNumber) {
+			public IAudioDecoderStream seek(long frameNumber) {
 				// TODO
 				throw new VelvetVideoException("Not yet implemented");
 			}
 
 			@Override
-			public IDecoderAudioStream seekNano(long ns) {
+			public IAudioDecoderStream seekNano(long ns) {
 				// TODO
 				throw new VelvetVideoException("Not yet implemented");
 			}
@@ -1175,22 +1175,22 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
         @Override
-        public List<? extends IDecoderVideoStream> videoStreams() {
+        public List<? extends IVideoDecoderStream> videoStreams() {
             return new ArrayList<>(indexToVideoStream.values());
         }
 
         @Override
-        public IDecoderVideoStream videoStream(int index) {
+        public IVideoDecoderStream videoStream(int index) {
         	return indexToVideoStream.get(index);
         }
 
         @Override
-        public List<? extends IDecoderAudioStream> audioStreams() {
+        public List<? extends IAudioDecoderStream> audioStreams() {
             return new ArrayList<>(indexToAudioStream.values());
         }
 
         @Override
-        public IDecoderAudioStream audioStream(int index) {
+        public IAudioDecoderStream audioStream(int index) {
         	return indexToAudioStream.get(index);
         }
 

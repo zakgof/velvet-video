@@ -2,7 +2,7 @@ package com.zakgof.velvetvideo.impl.middle;
 
 import java.awt.image.BufferedImage;
 
-import com.zakgof.velvetvideo.IDecoderVideoStream;
+import com.zakgof.velvetvideo.IVideoDecoderStream;
 import com.zakgof.velvetvideo.IVideoFrame;
 
 import lombok.Value;
@@ -14,7 +14,7 @@ class VideoFrameImpl implements IVideoFrame {
     private final BufferedImage image;
     private final long nanostamp;
     private final long nanoduration;
-    private final IDecoderVideoStream stream;
+    private final IVideoDecoderStream stream;
 
     @Override
 	public String toString() {

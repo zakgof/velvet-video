@@ -2,7 +2,7 @@ package com.zakgof.velvetvideo;
 
 import java.awt.image.BufferedImage;
 
-public interface IEncoderVideoStream {
+public interface IVideoEncoderStream {
 
 	void encode(BufferedImage image);
 

@@ -91,13 +91,13 @@ public class MetadataTest extends VelvetVideoTest {
         		.framerate(25)
         		.dimensions(640, 480))
         	.build(file.toFile())) {
-            IEncoderVideoStream encoder = muxer.videoEncoder(0);
+            IVideoEncoderStream encoder = muxer.videoEncoder(0);
             for (int i=0; i<FRAMES; i++) {
             	encoder.encode(colorImage(i));
             }
         }
         try (IDemuxer demuxer = lib.demuxer(file.toFile())) {
-            IDecoderVideoStream videoStream = demuxer.videoStreams().get(0);
+            IVideoDecoderStream videoStream = demuxer.videoStreams().get(0);
 			IVideoStreamProperties restored = videoStream.properties();
 			for (int i=0; i<FRAMES; i++) {
 	            IVideoFrame frame = videoStream.nextFrame();

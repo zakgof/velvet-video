@@ -1,6 +1,6 @@
 package com.zakgof.velvetvideo.impl;
 
-import com.zakgof.velvetvideo.IDecoderVideoStream;
+import com.zakgof.velvetvideo.IVideoDecoderStream;
 import com.zakgof.velvetvideo.IVideoEncoderBuilder;
 
 class VideoEncoderBuilderImpl extends AbstractEncoderBuilderImpl<IVideoEncoderBuilder> implements IVideoEncoderBuilder {
@@ -12,7 +12,7 @@ class VideoEncoderBuilderImpl extends AbstractEncoderBuilderImpl<IVideoEncoderBu
 		super(codec);
 	}
 
-	VideoEncoderBuilderImpl(IDecoderVideoStream decoder) {
+	VideoEncoderBuilderImpl(IVideoDecoderStream decoder) {
 		super(decoder);
 	}
 

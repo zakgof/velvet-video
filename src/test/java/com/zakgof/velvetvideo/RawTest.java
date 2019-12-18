@@ -61,7 +61,7 @@ public class RawTest extends VelvetVideoTest {
 
 		// Remux raw stream to MP4
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			IDecoderVideoStream origStream = demuxer.videoStream(0);
+			IVideoDecoderStream origStream = demuxer.videoStream(0);
 			try (IMuxer muxer = lib.muxer(format).remuxer(origStream).build(remuxed)) {
 				byte[] rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
@@ -97,7 +97,7 @@ public class RawTest extends VelvetVideoTest {
 		    .build(remuxed)) {
 			for (int t=0; t<TIMES; t++) {
 				try (IDemuxer demuxer = lib.demuxer(file)) {
-					IDecoderVideoStream origStream = demuxer.videoStreams().get(0);
+					IVideoDecoderStream origStream = demuxer.videoStreams().get(0);
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
 						muxer.remuxer(0).writeRaw(rawPacket);
@@ -174,7 +174,7 @@ public class RawTest extends VelvetVideoTest {
 
 			// Remux raw stream to MP4
 			try (IDemuxer demuxer = lib.demuxer(file)) {
-				IDecoderVideoStream origStream = demuxer.videoStream(0);
+				IVideoDecoderStream origStream = demuxer.videoStream(0);
 				try (IMuxer muxer = lib.muxer(format).remuxer(lib.remuxer(origStream).framerate(1)).build(remuxed)) {
 					byte[] rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
@@ -185,7 +185,7 @@ public class RawTest extends VelvetVideoTest {
 
 			// Read and check MP4 frames
 			try (IDemuxer demuxer = lib.demuxer(remuxed)) {
-				IDecoderVideoStream videoStream = demuxer.videoStream(0);
+				IVideoDecoderStream videoStream = demuxer.videoStream(0);
 				for (int i=0; i<FRAMES; i++) {
 					IVideoFrame frame = videoStream.nextFrame();
 					Assertions.assertEquals(1000000000L, frame.nanoduration());

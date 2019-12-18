@@ -230,7 +230,7 @@ public class VelvetVideoTest {
 
 	protected byte[] readAudio(File file, int ms) {
 		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
-		IDecoderAudioStream audioStream = lib.demuxer(file).audioStreams().get(0);
+		IAudioDecoderStream audioStream = lib.demuxer(file).audioStreams().get(0);
 		AudioFormat format = audioStream.properties().format();
 		int length = (int) (ms * format.getSampleRate() * format.getSampleSizeInBits() * format.getChannels() / 8000);
 		byte[] buffer = new byte[length + 16384];
