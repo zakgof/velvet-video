@@ -22,7 +22,6 @@ public class ImagesToVideoAndBack {
 		File src = Util.getFile("https://www.sample-videos.com/video123/mkv/240/big_buck_bunny_240p_10mb.mkv", "source.mkv");
 		List<BufferedImage> frames = extractFrameImagesFromVideo(src, 10);
 		createVideoFromFrameImages(frames, new File(src.getParentFile(), "output.webm"));
-
 	}
 
 	private static List<BufferedImage> extractFrameImagesFromVideo(File src, int framecount) throws IOException {
@@ -30,7 +29,7 @@ public class ImagesToVideoAndBack {
 		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		try (IDemuxer demuxer = lib.demuxer(src)) {
 			IVideoDecoderStream videoStream = demuxer.videoStreams().get(0);
-			for (int i=0; i<framecount; i++) {
+			for (int i = 0; i < framecount; i++) {
 				IVideoFrame videoFrame = videoStream.nextFrame();
 				BufferedImage image = videoFrame.image();
 				images.add(image);
@@ -44,7 +43,8 @@ public class ImagesToVideoAndBack {
 
 	private static void createVideoFromFrameImages(List<BufferedImage> images, File output) {
 		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
-		try (IMuxer muxer = lib.muxer("webm").videoEncoder(lib.videoEncoder("libvpx-vp9").framerate(1, 5)).build(output)) {
+		try (IMuxer muxer = lib.muxer("webm").videoEncoder(lib.videoEncoder("libvpx-vp9").framerate(1, 5))
+				.build(output)) {
 			IVideoEncoderStream encoder = muxer.videoEncoder(0);
 			for (BufferedImage image : images) {
 				encoder.encode(image);
