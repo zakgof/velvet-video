@@ -1,5 +1,6 @@
 package com.zakgof.velvetvideo.impl.middle;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferByte;
@@ -69,6 +70,13 @@ public class VideoFrameHolder implements AutoCloseable, IFrameHolder {
 	}
 
 	private static byte[] bytesOf(BufferedImage image) {
+		if (image.getType() != BufferedImage.TYPE_3BYTE_BGR) {
+			BufferedImage newimage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+			Graphics2D g = newimage.createGraphics();
+			g.drawImage(image, 0, 0, null);
+			g.dispose();
+			image = newimage;
+		}
 		Raster raster = image.getRaster();
 		DataBuffer buffer = raster.getDataBuffer();
 		if (buffer instanceof DataBufferByte) {
