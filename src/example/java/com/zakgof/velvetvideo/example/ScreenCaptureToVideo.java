@@ -28,8 +28,10 @@ public class ScreenCaptureToVideo {
 		Robot robot = new Robot();
 		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 
-		IVideoEncoderBuilder encoderBuilder = lib.videoEncoder("libx264").framerate(FRAMERATE)
-				.dimensions(screenRect.width, screenRect.height).bitrate(1000000);
+		IVideoEncoderBuilder encoderBuilder = lib.videoEncoder("libx264")
+			.framerate(FRAMERATE)
+			.dimensions(screenRect.width, screenRect.height)
+			.bitrate(1000000);
 
 		try (IMuxer muxer = lib.muxer("mp4").videoEncoder(encoderBuilder).build(dest)) {
 			IVideoEncoderStream videoEncoder = muxer.videoEncoder(0);
