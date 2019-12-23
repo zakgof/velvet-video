@@ -251,13 +251,10 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			checkcode(libavcodec.av_new_packet(packet, rp.bytes().length));
             packet.data.get().put(0, rp.bytes(), 0, rp.bytes().length);
             packet.stream_index.set(rp.streamIndex());
-            packet.pts.set(rp.pts());
-            long dur = rp.duration();
-            if (dur == 0)
-            	dur = defaultFrameDuration;
-			packet.duration.set(dur);
-			nextPts += rp.duration();
-			// logEncoder.atDebug() TODO
+            packet.pts.set(rp.pts() == AVNOPTS_VALUE ? nextPts : rp.pts());
+            packet.dts.set(rp.dts());
+			packet.duration.set(rp.duration());
+			nextPts += rp.duration() == 0 ? defaultFrameDuration : rp.duration();
 			output.accept(packet);
             libavcodec.av_packet_unref(packet);
 		}
