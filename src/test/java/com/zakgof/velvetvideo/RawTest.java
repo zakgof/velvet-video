@@ -63,7 +63,7 @@ public class RawTest extends VelvetVideoTest {
 		try (IDemuxer demuxer = lib.demuxer(file)) {
 			IVideoDecoderStream origStream = demuxer.videoStream(0);
 			try (IMuxer muxer = lib.muxer(format).remuxer(origStream).build(remuxed)) {
-				byte[] rawPacket;
+				IRawPacket rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
 					muxer.remuxer(0).writeRaw(rawPacket);
 				}
@@ -98,7 +98,7 @@ public class RawTest extends VelvetVideoTest {
 			for (int t=0; t<TIMES; t++) {
 				try (IDemuxer demuxer = lib.demuxer(file)) {
 					IVideoDecoderStream origStream = demuxer.videoStreams().get(0);
-					byte[] rawPacket;
+					IRawPacket rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
 						muxer.remuxer(0).writeRaw(rawPacket);
 					}
@@ -176,7 +176,7 @@ public class RawTest extends VelvetVideoTest {
 			try (IDemuxer demuxer = lib.demuxer(file)) {
 				IVideoDecoderStream origStream = demuxer.videoStream(0);
 				try (IMuxer muxer = lib.muxer(format).remuxer(lib.remuxer(origStream).framerate(1)).build(remuxed)) {
-					byte[] rawPacket;
+					IRawPacket rawPacket;
 					while ((rawPacket = origStream.nextRawPacket()) != null) {
 						muxer.remuxer(0).writeRaw(rawPacket);
 					}

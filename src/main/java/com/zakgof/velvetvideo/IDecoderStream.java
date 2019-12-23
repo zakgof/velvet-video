@@ -15,7 +15,7 @@ public interface IDecoderStream<I extends IDecoderStream<?, ?, ?>, F, P> extends
 
 	I seekNano(long ns);
 
-	byte[] nextRawPacket();
+	IRawPacket nextRawPacket();
 
 	int index();
 

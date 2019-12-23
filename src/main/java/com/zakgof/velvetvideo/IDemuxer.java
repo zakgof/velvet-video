@@ -27,4 +27,6 @@ public interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket<?>> {
 
 	@Override
 	Iterator<IDecodedPacket<?>> iterator();
+
+	IRawPacket nextRawPacket();
 }
