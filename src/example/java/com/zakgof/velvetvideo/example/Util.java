@@ -21,4 +21,11 @@ public class Util {
 		}
 		return file;
  	}
+
+	public static File workDir() {
+		String home = System.getProperty("user.home");
+		File dir = Paths.get(home, ".velvet-video", "examples").toFile();
+		dir.mkdirs();
+		return dir;
+ 	}
 }

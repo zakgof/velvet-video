@@ -47,7 +47,7 @@ public class AudioTest extends VelvetVideoTest {
 		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		AudioFormat audioFormat = new AudioFormat(Encoding.PCM_SIGNED, 48000, 16, 2, 4, 48000, false);
 		try (IMuxer muxer = lib.muxer(format).audioEncoder(lib.audioEncoder(codec, audioFormat).enableExperimental()).build(dest)) {
-			IEncoderAudioStream encoder = muxer.audioEncoder(0);
+			IAudioEncoderStream encoder = muxer.audioEncoder(0);
 			for (int offset = 0; offset < bufferorig.length; offset+=encoder.frameBytes()) {
 				encoder.encode(bufferorig, offset);
 			}

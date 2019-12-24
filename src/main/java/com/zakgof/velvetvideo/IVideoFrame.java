@@ -2,7 +2,7 @@ package com.zakgof.velvetvideo;
 
 import java.awt.image.BufferedImage;
 
-public interface IVideoFrame extends IDecodedPacket<IDecoderVideoStream> {
+public interface IVideoFrame extends IDecodedPacket<IVideoDecoderStream> {
 
 	BufferedImage image();
 

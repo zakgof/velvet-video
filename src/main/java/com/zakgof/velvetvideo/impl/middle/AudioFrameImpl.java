@@ -1,7 +1,7 @@
 package com.zakgof.velvetvideo.impl.middle;
 
 import com.zakgof.velvetvideo.IAudioFrame;
-import com.zakgof.velvetvideo.IDecoderAudioStream;
+import com.zakgof.velvetvideo.IAudioDecoderStream;
 
 import lombok.Value;
 import lombok.experimental.Accessors;
@@ -13,7 +13,7 @@ class AudioFrameImpl implements IAudioFrame {
 	private final byte[] samples;
 	private final long nanostamp;
     private final long nanoduration;
-    private final IDecoderAudioStream stream;
+    private final IAudioDecoderStream stream;
 
     @Override
 	public String toString() {

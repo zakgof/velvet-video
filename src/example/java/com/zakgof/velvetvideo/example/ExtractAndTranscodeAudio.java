@@ -6,11 +6,11 @@ import java.util.Map;
 
 import javax.sound.sampled.AudioFormat;
 
+import com.zakgof.velvetvideo.IAudioDecoderStream;
+import com.zakgof.velvetvideo.IAudioEncoderStream;
 import com.zakgof.velvetvideo.IAudioFrame;
 import com.zakgof.velvetvideo.IDecodedPacket;
-import com.zakgof.velvetvideo.IDecoderAudioStream;
 import com.zakgof.velvetvideo.IDemuxer;
-import com.zakgof.velvetvideo.IEncoderAudioStream;
 import com.zakgof.velvetvideo.IMuxer;
 import com.zakgof.velvetvideo.IVelvetVideoLib;
 import com.zakgof.velvetvideo.MediaType;
@@ -27,12 +27,12 @@ public class ExtractAndTranscodeAudio {
 	private static void extractAndTranscodeFirstAudioTrack(File src) {
 		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		try (IDemuxer demuxer = lib.demuxer(src)) {
-			IDecoderAudioStream audioStream = demuxer.audioStreams().get(0);
+			IAudioDecoderStream audioStream = demuxer.audioStreams().get(0);
 			AudioFormat format = audioStream.properties().format();
 			File output = new File(src.getParent(), "extracted_first.mp3");
 			System.out.println(output);
 			try (IMuxer muxer = lib.muxer("mp3").audioEncoder(lib.audioEncoder("libmp3lame", format)).build(output)) {
-				IEncoderAudioStream audioEncoder = muxer.audioEncoder(0);
+				IAudioEncoderStream audioEncoder = muxer.audioEncoder(0);
 				for (IAudioFrame audioFrame : audioStream) {
 					audioEncoder.encode(audioFrame.samples());
 				}
@@ -44,7 +44,7 @@ public class ExtractAndTranscodeAudio {
 		IVelvetVideoLib lib = VelvetVideoLib.getInstance();
 		try (IDemuxer demuxer = lib.demuxer(src)) {
 			Map<Integer, IMuxer> muxers = new HashMap<>();
-			for (IDecoderAudioStream audioStream : demuxer.audioStreams()) {
+			for (IAudioDecoderStream audioStream : demuxer.audioStreams()) {
 				AudioFormat format = audioStream.properties().format();
 				File output = new File(src.getParent(), "extracted_" + audioStream.index() + ".mp3");
 				System.out.println(output);

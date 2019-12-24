@@ -1,7 +1,7 @@
 # velvet-video
-Java library for encoding/decoding/muxing/demuxing video and audio
+Java library for encoding/decoding/muxing/demuxing video and audio. The API is high level, so the library users do not need to dive deep into  details of video/audio encoding technology.
 
-With velvet-video it's easy to:
+In particular, with velvet-video it's easy to:
 - create video from still images
 - extract frames from a video
 - extract audio tracks from video files
@@ -44,7 +44,7 @@ The choice for native package is:
 ### gradle
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video:0.3.7'
+    compile 'com.github.zakgof:velvet-video:0.5.0'
     compile 'com.github.zakgof:velvet-video-natives:0.2.6.full'
 }
 ````
@@ -53,7 +53,7 @@ dependencies {
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video</artifactId>
-  <version>0.3.7</version>
+  <version>0.5.0</version>
   <type>pom</type>
 </dependency>
 <dependency>
@@ -69,19 +69,20 @@ dependencies {
 ### Encode images into a video:
 
 ````java
-    IVelvetVideoLib lib = new VelvetVideoLib();
+    IVelvetVideoLib lib = VelvetVideoLib().getInstance();
     try (IMuxer muxer = lib.muxer("matroska")
-        .video(lib.videoEncoder("libaom-av1").bitrate(100000))
-        .build(new File("/some/path/output.mkv"))) {            
-           muxer.video(0).encode(image1, 0);
-           muxer.video(0).encode(image2, 1);
-           muxer.video(0).encode(image3, 2);
+        .video(lib.videoEncoder("libaom-av1").bitrate(800000))
+        .build(new File("/some/path/output.mkv"))) {
+             IEncoderVideoStream videoStream = muxer.videoStream(0);	        
+             videoStream.encode(image1);
+             videoStream.encode(image2);
+             videoStream.encode(image3);
     }      
 ````
 ### Obtain images from a video:
 
 ````java
-	IVelvetVideoLib lib = new VelvetVideoLib();
+	IVelvetVideoLib lib = VelvetVideoLib().getInstance();
 	try (IDemuxer demuxer = lib.demuxer(new File("/some/path/example.mp4"))) {
 	    IDecoderVideoStream videoStream = demuxer.videoStream(0);
 	    IFrame videoFrame;
@@ -91,8 +92,21 @@ dependencies {
 	    }
 	}      
 ````
+### More examples
+ 
+https://github.com/zakgof/velvet-video/tree/master/src/example/java/com/zakgof/velvetvideo/example
 
-### Play a video file
+|                   Example        |                   Description               |
+|----------------------------------|---------------------------------------------|
+|  ImagesToVideoAndBack            | Extract frame images from a video + compose a video from images          |
+|  TranscodeVideoWithTimingEffects | Transcode a video using another codec and applying slomo  |
+|  RemuxVideo                      | Repackage a video into another container format without transcoding |
+|  ScreenCaptureToVideo            | Capture the whole desktop to video          |
+|  AudioPlayback                   | Play a compressed audio file                |
+|  ExtractAndTranscodeAudio        | Fetch audio tracks from a video file and save them as mp3 files              |
+
+
+### Advanced example: video player
 
 See https://github.com/zakgof/velvet-video-player
 

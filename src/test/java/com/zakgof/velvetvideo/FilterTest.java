@@ -86,7 +86,7 @@ public class FilterTest extends VelvetVideoTest {
 
 	private void checkFlipped(File file, IVelvetVideoLib lib, String filterString) {
 		try (IDemuxer demuxer = lib.demuxer(file)) {
-			IDecoderVideoStream videoStream = demuxer.videoStream(0);
+			IVideoDecoderStream videoStream = demuxer.videoStream(0);
 			videoStream.setFilter(filterString);
 			for (int i=0; i<FRAME_COUNT; i++) {
 				IVideoFrame frame = videoStream.nextFrame();
@@ -107,7 +107,7 @@ public class FilterTest extends VelvetVideoTest {
 		    .videoEncoder(encoder)
 		    .build(file)) {
 
-			IEncoderVideoStream videoStream = muxer.videoEncoder(0);
+			IVideoEncoderStream videoStream = muxer.videoEncoder(0);
 			for (int i=0; i<FRAME_COUNT; i++) {
 				BufferedImage image = colorImageNoisy(i);
 				videoStream.encode(image);

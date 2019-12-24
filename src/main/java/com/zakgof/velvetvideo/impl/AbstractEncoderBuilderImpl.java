@@ -3,7 +3,7 @@ package com.zakgof.velvetvideo.impl;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.zakgof.velvetvideo.IDecoderVideoStream;
+import com.zakgof.velvetvideo.IVideoDecoderStream;
 
 abstract class AbstractEncoderBuilderImpl<I> {
 
@@ -14,14 +14,14 @@ abstract class AbstractEncoderBuilderImpl<I> {
 	Map<String, String> params = new HashMap<>();
 	Map<String, String> metadata = new HashMap<>();
 	boolean enableExperimental;
-	IDecoderVideoStream decoder;
+	IVideoDecoderStream decoder;
 	String filter;
 
 	AbstractEncoderBuilderImpl(String codec) {
 		this.codec = codec;
 	}
 
-	AbstractEncoderBuilderImpl(IDecoderVideoStream decoder) {
+	AbstractEncoderBuilderImpl(IVideoDecoderStream decoder) {
 		this.decoder = decoder;
 	}
 

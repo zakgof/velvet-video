@@ -1,6 +1,6 @@
 package com.zakgof.velvetvideo;
 
-public interface IEncoderAudioStream {
+public interface IAudioEncoderStream {
 
 	void encode(byte[] samples);
 

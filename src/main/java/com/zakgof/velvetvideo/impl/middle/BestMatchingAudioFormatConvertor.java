@@ -59,8 +59,6 @@ public class BestMatchingAudioFormatConvertor implements Function<AudioFormat, A
 		if (format.isBigEndian())
 			metric += 1e6;
 
-		// System.err.println("Metric " + metric + " for format " + format);
-
 		return metric;
 	}
 

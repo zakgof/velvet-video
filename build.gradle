@@ -13,7 +13,7 @@ compileJava.options.encoding = 'UTF-8'
 
 group = 'com.github.zakgof'
 archivesBaseName = 'velvet-video'
-version = '0.4.0'
+version = '0.5.0'
 def github = 'https://github.com/zakgof/velvet-video'
 
 sourceCompatibility = 1.8
@@ -25,14 +25,14 @@ dependencies {
     implementation 'commons-io:commons-io:2.6'
     implementation 'com.github.zakgof:tools:0.7.0'
 
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    testRuntimeOnly 'com.github.zakgof:velvet-video-natives:0.2.6.full'
+    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.0-alpha0'
+
     testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.3.1'
     testImplementation 'org.junit.platform:junit-platform-launcher:1.5.2'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-api:5.3.1'
-    testRuntimeOnly 'com.github.zakgof:velvet-video-natives:0.2.6.full'
-    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.0-alpha0'
-    testRuntimeOnly 'com.github.fracpete:musicg:1.4.2.2'
-    
+    testImplementation 'com.github.fracpete:musicg:1.4.2.2'
 }
 
 repositories {
@@ -48,6 +48,14 @@ test {
 
 testlogger {
     showStandardStreams true
+}
+
+sourceSets {
+    test {
+        java {
+            srcDirs = ['src/test/java', 'src/example/java']
+        }
+    }
 }
 
 task fatJar(type: Jar) {
@@ -76,30 +84,28 @@ artifacts {
 }
 
 def pomConfig = {
-     scm {
-          connection 'scm:git:${github}.git'
-          developerConnection 'scm:git:${github}.git'
-          url github
-        }
-
-        licenses {
-          license {
+    scm {
+        connection 'scm:git:${github}.git'
+        developerConnection 'scm:git:${github}.git'
+        url github
+    }
+    licenses {
+        license {
             name 'The Apache License, Version 2.0'
             url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-          }
-          license {
+        }
+        license {
 			name 'GNU General Public License v3.0'
    			url 'https://opensource.org/licenses/GPL-3.0'
-          }
         }
-
-        developers {
-          developer {
+    }
+    developers {
+        developer {
             id 'zakgof'
             name 'Oleksandr Zakusylo'
             email 'zakgof@gmail.com'
-          }
         }
+    }
 }
 
 publishing {
@@ -159,5 +165,3 @@ artifactory {
     }
     clientConfig.info.setBuildNumber('0001')
 }
-
-

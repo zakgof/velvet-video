@@ -1,9 +1,5 @@
 package com.zakgof.velvetvideo.impl.jnr;
 
-import java.awt.image.BufferedImage;
-
-import com.zakgof.velvetvideo.VelvetVideoException;
-
 import jnr.ffi.util.EnumMapper.IntegerEnum;
 
 public enum AVPixelFormat implements IntegerEnum {
@@ -60,12 +56,9 @@ public enum AVPixelFormat implements IntegerEnum {
 	public int intValue() {
         return ordinal();
     }
-    
+
     public static AVPixelFormat avformatOf(int type) {
-        if (type == BufferedImage.TYPE_3BYTE_BGR) {
-            return AVPixelFormat.AV_PIX_FMT_BGR24;
-        } else {
-            throw new VelvetVideoException("Unsupported BufferedImage type, only TYPE_3BYTE_BGR supported at the moment");
-        }
+    	// TODO: issue a warning
+        return AVPixelFormat.AV_PIX_FMT_BGR24;
     }
 }

@@ -3,7 +3,7 @@ package com.zakgof.velvetvideo.impl.middle;
 import javax.sound.sampled.AudioFormat;
 
 import com.zakgof.velvetvideo.IAudioFrame;
-import com.zakgof.velvetvideo.IDecoderAudioStream;
+import com.zakgof.velvetvideo.IAudioDecoderStream;
 import com.zakgof.velvetvideo.impl.JNRHelper;
 import com.zakgof.velvetvideo.impl.VelvetVideoLib.DemuxerImpl.AbstractDecoderStream;
 import com.zakgof.velvetvideo.impl.jnr.AVCodecContext;
@@ -130,6 +130,6 @@ public class AudioFrameHolder implements AutoCloseable, IFrameHolder {
 		byte[] samples = samples(frame);
 		long nanostamp = pts * 1000000000L * timebase.num.get() / timebase.den.get();
 		long nanoduration = duration * 1000000000L * timebase.num.get() / timebase.den.get();
-		return new AudioFrameImpl(samples, nanostamp, nanoduration, (IDecoderAudioStream)stream);
+		return new AudioFrameImpl(samples, nanostamp, nanoduration, (IAudioDecoderStream)stream);
 	}
 }
