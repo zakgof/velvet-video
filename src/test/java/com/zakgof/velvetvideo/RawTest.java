@@ -65,7 +65,7 @@ public class RawTest extends VelvetVideoTest {
 			try (IMuxer muxer = lib.muxer(format).remuxer(origStream).build(remuxed)) {
 				IRawPacket rawPacket;
 				while ((rawPacket = origStream.nextRawPacket()) != null) {
-					muxer.remuxer(0).writeRaw(rawPacket);
+					muxer.remuxer(0).writeRaw(rawPacket.bytes());
 				}
 			}
 		}

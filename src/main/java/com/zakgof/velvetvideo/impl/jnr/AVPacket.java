@@ -22,7 +22,7 @@ public class AVPacket extends Struct {
  	public int64_t duration = new int64_t();
  	public int64_t pos = new int64_t();
  	public int64_t convergence_duration = new int64_t();
- 	
+
  	public byte[] bytes() {
 		byte[] raw = new byte[size.get()];
 		data.get().get(0, raw, 0, raw.length);

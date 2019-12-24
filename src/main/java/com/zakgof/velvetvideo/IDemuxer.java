@@ -9,13 +9,14 @@ public interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket<?>> {
 	@Override
 	void close();
 
+	List<IDecoderStream<?, ?, ?>> streams();
+
 	List<? extends IVideoDecoderStream> videoStreams();
-
-	IVideoDecoderStream videoStream(int index);
-
 	List<? extends IAudioDecoderStream> audioStreams();
 
+	IVideoDecoderStream videoStream(int index);
 	IAudioDecoderStream audioStream(int index);
+
 
 	Map<String, String> metadata();
 
@@ -23,7 +24,7 @@ public interface IDemuxer extends AutoCloseable, Iterable<IDecodedPacket<?>> {
 
 	IDecodedPacket<?> nextPacket();
 
-	Stream<IDecodedPacket<?>> stream();
+	Stream<IDecodedPacket<?>> packetStream();
 
 	@Override
 	Iterator<IDecodedPacket<?>> iterator();
