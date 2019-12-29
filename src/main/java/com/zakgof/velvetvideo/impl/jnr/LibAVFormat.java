@@ -1,5 +1,10 @@
 package com.zakgof.velvetvideo.impl.jnr;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.zakgof.velvetvideo.Direction;
+
 import jnr.ffi.Pointer;
 import jnr.ffi.annotations.Delegate;
 import jnr.ffi.annotations.In;
@@ -17,6 +22,9 @@ public interface LibAVFormat {
     static final int  AVSEEK_FLAG_ANY      = 4; ///< seek to any frame, even non-keyframes
     static final int  AVSEEK_FLAG_FRAME    = 8;
 
+    AVInputFormat av_demuxer_iterate(PointerByReference opaque);
+
+    AVOutputFormat av_muxer_iterate	(PointerByReference opaque);
 
 	int avformat_alloc_output_context2(@Out PointerByReference ctx, AVOutputFormat oformat, String format_name,
 			String filename);
@@ -71,5 +79,22 @@ public interface LibAVFormat {
 	int av_read_frame(AVFormatContext context, AVPacket pkt);
 
 	int av_seek_frame(AVFormatContext context, int stream_index, long timestamp, int flags);
+
+	default List<String> formats(Direction dir) {
+		List<String> formats = new ArrayList<>();
+		PointerByReference ptr = new PointerByReference();
+		if (dir == Direction.Encode) {
+			AVOutputFormat format;
+			while ((format = av_muxer_iterate(ptr)) != null) {
+				formats.add(format.name.get());
+			}
+		} else if (dir == Direction.Decode) {
+			AVInputFormat format;
+			while ((format = av_demuxer_iterate(ptr)) != null) {
+				formats.add(format.name.get());
+			}
+		}
+		return formats;
+	}
 
 }

@@ -24,6 +24,14 @@ public interface IVelvetVideoLib {
 	List<String> codecs(Direction dir, MediaType mediaType);
 
 	/**
+	 * List supported muxer/demuxer media container format types.
+	 *
+	 * @param dir direction (Encode for muxing, Decode for demuxing)
+	 * @return list of format names
+	 */
+	List<String> formats(Direction dir);
+
+	/**
 	 * Create a video encoder builder.
 	 *
 	 * @param codec requested codec (encoder) name

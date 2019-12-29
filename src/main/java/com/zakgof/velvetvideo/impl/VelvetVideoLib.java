@@ -130,6 +130,11 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     }
 
     @Override
+    public List<String> formats(Direction dir) {
+    	return libavformat.formats(dir);
+    }
+
+    @Override
     public IVideoEncoderBuilder videoEncoder(String codec) {
         return new VideoEncoderBuilderImpl(codec);
     }
