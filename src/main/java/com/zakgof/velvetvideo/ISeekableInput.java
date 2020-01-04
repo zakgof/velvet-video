@@ -13,7 +13,7 @@ public interface ISeekableInput extends AutoCloseable {
     int read(byte[] bytes);
 
     /**
-     * Seek read pointer to the specified position.
+     * Seeks read pointer to the specified position.
      * @param position offset from the stream start to put the read pointer
      */
     void seek(long position);
@@ -24,7 +24,7 @@ public interface ISeekableInput extends AutoCloseable {
     long size();
 
     /**
-     * Close the input stream and free the resources.
+     * Closes the input stream and free the resources.
      */
     @Override
 	void close();

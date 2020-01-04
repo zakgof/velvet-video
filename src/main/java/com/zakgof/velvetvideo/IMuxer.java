@@ -1,7 +1,7 @@
 package com.zakgof.velvetvideo;
 
 /**
- * Muxer - interface to access media streams in a media container.
+ * Muxer - interface to write media streams into a media container.
  */
 public interface IMuxer extends AutoCloseable {
 
