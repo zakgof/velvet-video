@@ -1,6 +1,6 @@
 package com.zakgof.velvetvideo;
 
-public interface IMuxerProperties {
+public interface IContainerProperties {
     String format();
 
 	long nanoduration();

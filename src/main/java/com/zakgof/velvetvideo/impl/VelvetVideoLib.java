@@ -37,7 +37,7 @@ import com.zakgof.velvetvideo.IDecoderStream;
 import com.zakgof.velvetvideo.IDemuxer;
 import com.zakgof.velvetvideo.IMuxer;
 import com.zakgof.velvetvideo.IMuxerBuilder;
-import com.zakgof.velvetvideo.IMuxerProperties;
+import com.zakgof.velvetvideo.IContainerProperties;
 import com.zakgof.velvetvideo.IRawPacket;
 import com.zakgof.velvetvideo.IRemuxerBuilder;
 import com.zakgof.velvetvideo.IRemuxerStream;
@@ -1271,7 +1271,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         }
 
         @Override
-        public IMuxerProperties properties() {
+        public IContainerProperties properties() {
         	// TODO: how to get single format ?
         	return new MuxerProperties(formatCtx.iformat.get().name.get(), formatCtx.duration.get() * 1000L);
         }
@@ -1322,7 +1322,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 @Accessors(fluent = true)
 @Value
 @ToString
-class MuxerProperties implements IMuxerProperties {
+class MuxerProperties implements IContainerProperties {
     private final String format;
     private final long nanoduration;
 }

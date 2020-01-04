@@ -6,8 +6,8 @@ package com.zakgof.velvetvideo;
 public interface IAudioFrame extends IDecodedPacket<IAudioDecoderStream> {
 
 	/**
-	 * Decoded audio samples
-	 * @return audio samples bytes.
+	 * Decoded audio samples.
+	 * @return audio samples bytes
 	 */
 	byte[] samples();
 
