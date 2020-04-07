@@ -2,10 +2,8 @@ package com.zakgof.velvetvideo.impl;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -794,8 +792,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     }
 
     @Override
-    public IDemuxer demuxer(InputStream is) {
-        return new DemuxerImpl((FileInputStream) is);
+    public IDemuxer demuxer(ISeekableInput input) {
+        return new DemuxerImpl(input);
     }
 
     public class DemuxerImpl implements IDemuxer {
@@ -811,8 +809,8 @@ public class VelvetVideoLib implements IVelvetVideoLib {
         private final List<AbstractDecoderStream> allStreams = new ArrayList<>();
 		private int flushStreamIndex = 0;
 
-        public DemuxerImpl(FileInputStream input) {
-            this.input = new FileSeekableInput(input);
+        public DemuxerImpl(ISeekableInput input) {
+            this.input = input;
             this.packet = libavcodec.av_packet_alloc();
             this.formatCtx = libavformat.avformat_alloc_context();
             this.callback = new IOCallback();

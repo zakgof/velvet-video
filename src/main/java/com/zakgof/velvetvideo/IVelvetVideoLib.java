@@ -3,10 +3,11 @@ package com.zakgof.velvetvideo;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.util.List;
 
 import javax.sound.sampled.AudioFormat;
+
+import com.zakgof.velvetvideo.impl.FileSeekableInput;
 
 /**
  * Top-level interface for working with velvet-video.
@@ -71,14 +72,14 @@ public interface IVelvetVideoLib {
 	 */
 	IMuxerBuilder muxer(String format);
 
-	/**
-	 * Open a demuxer to demux from the specified input stream. The demuxer should
-	 * be closed by calling {@link IDemuxer#close()} after using.
-	 *
-	 * @param is input stream
-	 * @return demuxer instance
-	 */
-	IDemuxer demuxer(InputStream is);
+	 /**
+     * Open a demuxer to demux from the specified seekable input stream. The demuxer should
+     * be closed by calling {@link IDemuxer#close()} after using.
+     *
+     * @param input input
+     * @return demuxer instance
+     */
+    IDemuxer demuxer(ISeekableInput input);
 
 	/**
 	 * Open a demuxer to demux from the specified file
@@ -88,7 +89,7 @@ public interface IVelvetVideoLib {
 	 */
 	default IDemuxer demuxer(File file) {
 		try {
-			return demuxer(new FileInputStream(file));
+			return demuxer(new FileSeekableInput(new FileInputStream(file)));
 		} catch (FileNotFoundException e) {
 			throw new VelvetVideoException(e);
 		}
