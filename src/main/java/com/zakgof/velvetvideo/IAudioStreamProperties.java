@@ -7,15 +7,15 @@ import javax.sound.sampled.AudioFormat;
  */
 public interface IAudioStreamProperties {
 
-	/** Codec name */
+	/** @return codec name */
 	String codec();
 
-	/** Total stream duration, in nanoseconds */
+	/** @return total stream duration, in nanoseconds */
 	long nanoduration();
 
-	/** Total number of samples */
+	/** @return total number of samples */
 	long samples();
 
-	/** Stream audio format */
+	/** @return stream audio format */
 	AudioFormat format();
 }

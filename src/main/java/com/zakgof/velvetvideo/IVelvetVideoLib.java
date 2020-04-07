@@ -44,7 +44,7 @@ public interface IVelvetVideoLib {
 	 * Create an audio encoder builder.
 	 *
 	 * @param codec requested codec (encoder) name
-	 * @param input audio format. If the requested format is not supported by the
+	 * @param audioFormat audio format. If the requested format is not supported by the
 	 *              codec, velvet-video will choose the closest compatible audio
 	 *              format and will perform format conversion on the fly
 	 * @return audio encoder builder instance
