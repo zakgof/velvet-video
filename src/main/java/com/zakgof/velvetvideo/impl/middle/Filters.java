@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.zakgof.velvetvideo.impl.JNRHelper;
-import com.zakgof.velvetvideo.impl.VelvetVideoLib;
 import com.zakgof.velvetvideo.impl.jnr.AVCodecContext;
 import com.zakgof.velvetvideo.impl.jnr.AVFrame;
 import com.zakgof.velvetvideo.impl.jnr.LibAVFilter;
@@ -97,7 +96,7 @@ public class Filters implements AutoCloseable {
 				.log(inputframe == null ? "filter flush" : "frame send to filter PTS=" + inputframe.pts.get());
 		libavutil.checkcode(libavfilter.av_buffersrc_write_frame(buffersrc_ctx, inputframe));
 		int res = libavfilter.av_buffersink_get_frame(buffersink_ctx, workframe);
-		if (res == VelvetVideoLib.AVERROR_EAGAIN || res == VelvetVideoLib.AVERROR_EOF) {
+		if (res == LibAVUtil.AVERROR_EAGAIN || res == LibAVUtil.AVERROR_EOF) {
 			if (inputframe == null)
 				logFilter.atDebug().log("filter buffers empty");
 			return null;

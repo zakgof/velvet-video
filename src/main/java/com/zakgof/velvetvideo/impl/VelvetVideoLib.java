@@ -32,12 +32,12 @@ import com.zakgof.velvetvideo.IAudioEncoderBuilder;
 import com.zakgof.velvetvideo.IAudioEncoderStream;
 import com.zakgof.velvetvideo.IAudioFrame;
 import com.zakgof.velvetvideo.IAudioStreamProperties;
+import com.zakgof.velvetvideo.IContainerProperties;
 import com.zakgof.velvetvideo.IDecodedPacket;
 import com.zakgof.velvetvideo.IDecoderStream;
 import com.zakgof.velvetvideo.IDemuxer;
 import com.zakgof.velvetvideo.IMuxer;
 import com.zakgof.velvetvideo.IMuxerBuilder;
-import com.zakgof.velvetvideo.IContainerProperties;
 import com.zakgof.velvetvideo.IRawPacket;
 import com.zakgof.velvetvideo.IRemuxerBuilder;
 import com.zakgof.velvetvideo.IRemuxerStream;
@@ -89,8 +89,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
     private static final int AVIO_CUSTOM_BUFFER_SIZE = 32768;
 
 
-    public static final int AVERROR_EOF = -541478725;
-    public static final int AVERROR_EAGAIN = -11;
+
     private static final long AVNOPTS_VALUE = LibAVUtil.AVNOPTS_VALUE;
 
     // private static final Logger ffmpegLogger = LoggerFactory.getLogger("velvet-video.ffmpeg");
@@ -371,7 +370,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             for (;;) {
             	libavcodec.av_init_packet(packet);
                 int res = libavcodec.avcodec_receive_packet(codecCtx, packet);
-                if (res == AVERROR_EAGAIN || res == AVERROR_EOF)
+                if (res == LibAVUtil.AVERROR_EAGAIN || res == LibAVUtil.AVERROR_EOF)
                     break;
                 checkcode(res);
                 packet.stream_index.set(streamIndex);
@@ -820,7 +819,11 @@ public class VelvetVideoLib implements IVelvetVideoLib {
             initCustomAvio(true, formatCtx, callback);
 
             PointerByReference ptrctx = new PointerByReference(Struct.getMemory(formatCtx));
-            checkcode(libavformat.avformat_open_input(ptrctx, null, null, null));
+            int res = libavformat.avformat_open_input(ptrctx, null, null, null);
+            if (res == LibAVUtil.AVERROR_INVALIDDATA) {
+                throw new VelvetVideoException("Unknown container format");
+            }
+            checkcode(res);
             checkcode(libavformat.avformat_find_stream_info(formatCtx, null));
 
             long nb = formatCtx.nb_streams.get();
@@ -895,7 +898,7 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 			packet.data.set((Pointer) null); // TODO Wouldn't it overwrite ?
 			packet.size.set(0);
 			int res = libavformat.av_read_frame(formatCtx, packet);
-			if (res == AVERROR_EOF || res == -1) {
+			if (res == LibAVUtil.AVERROR_EOF || res == -1) {
 				logDemuxer.atDebug()
 					.log(() -> "muxer empty");
 				return null;
@@ -1146,14 +1149,14 @@ public class VelvetVideoLib implements IVelvetVideoLib {
 
             AVFrame feedPacket(AVPacket pack) {
             	 int res1 = libavcodec.avcodec_send_packet(codecCtx, pack);
-            	 if (res1 != AVERROR_EOF) {
+            	 if (res1 != LibAVUtil.AVERROR_EOF) {
             		 checkcode(res1);
             	 }
             	 if (frameHolder == null) {
             		 this.frameHolder = createFrameHolder();
             	 }
             	 int res = libavcodec.avcodec_receive_frame(codecCtx, frameHolder.frame());
-            	 if (res == AVERROR_EOF || pack != null && res == AVERROR_EAGAIN)
+            	 if (res == LibAVUtil.AVERROR_EOF || pack != null && res == LibAVUtil.AVERROR_EAGAIN)
             		 return null;
             	 checkcode(res);
             	 logDecoder.atDebug()
