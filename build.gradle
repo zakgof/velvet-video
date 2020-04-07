@@ -5,7 +5,6 @@ plugins {
     id "maven"
     id "maven-publish"
     id "com.jfrog.bintray" version "1.8.4"
-    id "com.jfrog.artifactory" version "4.9.9"
     id 'com.adarshr.test-logger' version '1.6.0'
 }
 
@@ -144,24 +143,4 @@ bintray {
             name = project.version
         }
     }
-}
-
-artifactory {
-    contextUrl = 'http://oss.jfrog.org'
-    publish {
-        repository {
-            repoKey = 'oss-snapshot-local'
-            username = 'zakgof'
-            password = project.hasProperty('bintrayKey') ? bintrayKey : System.getenv('BINTRAY_KEY')
-        }
-        defaults {
-            publications('MyPublication')
-            publishArtifacts = true
-            publishPom = true
-        }
-    }
-    resolve {
-        repoKey = 'jcenter'
-    }
-    clientConfig.info.setBuildNumber('0001')
 }
