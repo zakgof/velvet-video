@@ -31,7 +31,7 @@ import jnr.ffi.provider.ParameterFlags;
 
 public class JNRHelper {
 
-	private static final String MIN_NATIVE_VERSION = "0.2.6";
+	private static final String MIN_NATIVE_VERSION = "0.2.7";
 
 	private static final Logger LOG = LoggerFactory.getLogger("velvet-video");
     private static final String PLATFORM = getPlatform();

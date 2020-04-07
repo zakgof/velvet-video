@@ -14,12 +14,20 @@ public class GenericEncodeDecodeTest extends VelvetVideoTest {
 
     private static final int FRAMES = 16;
 
-    protected void codeclist(Collection<String> expectedCodecs, MediaType mediaType) throws IOException {
+    protected void codeclist(Collection<String> expectedCodecs, MediaType mediaType) {
         List<String> codecs = lib.codecs(Direction.Encode, mediaType);
         System.err.println(codecs);
         Set<String> codecSet = new HashSet<>(expectedCodecs);
         codecSet.removeAll(codecs);
         Assertions.assertTrue(codecSet.isEmpty(), "Missing codecs: " + codecSet);
+    }
+
+    protected void formatlist(Collection<String> expectedFormats, Direction dir) {
+        List<String> formats = lib.formats(dir);
+        System.err.println(formats);
+        Set<String> formatSet = new HashSet<>(expectedFormats);
+        formatSet.removeAll(formats);
+        Assertions.assertTrue(formatSet.isEmpty(), "Missing formats: " + formatSet);
     }
 
     protected void encodeDecodeCompare(String codec, String format) throws IOException {

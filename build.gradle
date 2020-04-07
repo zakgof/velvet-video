@@ -5,7 +5,6 @@ plugins {
     id "maven"
     id "maven-publish"
     id "com.jfrog.bintray" version "1.8.4"
-    id "com.jfrog.artifactory" version "4.9.9"
     id 'com.adarshr.test-logger' version '1.6.0'
 }
 
@@ -13,7 +12,7 @@ compileJava.options.encoding = 'UTF-8'
 
 group = 'com.github.zakgof'
 archivesBaseName = 'velvet-video'
-version = '0.5.0'
+version = '0.5.1'
 def github = 'https://github.com/zakgof/velvet-video'
 
 sourceCompatibility = 1.8
@@ -26,7 +25,7 @@ dependencies {
     implementation 'com.github.zakgof:tools:0.7.0'
 
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-api:5.3.1'
-    testRuntimeOnly 'com.github.zakgof:velvet-video-natives:0.2.6.full'
+    testRuntimeOnly 'com.github.zakgof:velvet-video-natives:0.2.7.full'
     testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.0-alpha0'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
@@ -144,24 +143,4 @@ bintray {
             name = project.version
         }
     }
-}
-
-artifactory {
-    contextUrl = 'http://oss.jfrog.org'
-    publish {
-        repository {
-            repoKey = 'oss-snapshot-local'
-            username = 'zakgof'
-            password = project.hasProperty('bintrayKey') ? bintrayKey : System.getenv('BINTRAY_KEY')
-        }
-        defaults {
-            publications('MyPublication')
-            publishArtifacts = true
-            publishPom = true
-        }
-    }
-    resolve {
-        repoKey = 'jcenter'
-    }
-    clientConfig.info.setBuildNumber('0001')
 }

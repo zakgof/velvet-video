@@ -21,7 +21,9 @@ public interface LibAVUtil {
 
     static final int ERROR_TEXT_BUFFER_SIZE = 512;
 
-
+    public static final int AVERROR_EOF = -541478725;
+    public static final int AVERROR_EAGAIN = -11;
+    public static final int AVERROR_INVALIDDATA = -1094995529;
     public static final long AVNOPTS_VALUE = -9223372036854775808L;
 
 

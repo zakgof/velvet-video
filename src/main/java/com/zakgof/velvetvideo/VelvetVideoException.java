@@ -1,5 +1,8 @@
 package com.zakgof.velvetvideo;
 
+/**
+ * Exception class for all velvet-video errors.
+ */
 public class VelvetVideoException extends RuntimeException {
 
 	private static final long serialVersionUID = -358651198038761511L;
