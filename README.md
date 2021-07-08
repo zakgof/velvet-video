@@ -28,7 +28,7 @@ Please contact me if you need support for a platform not listed here.
 
 ## Setup
 
-To use `velvet-video` add the core dependency plus an appropriate native FFmpeg components package. `velvet-video` is available on [bintray](https://bintray.com/zakgof/maven/velvet-video)
+To use `velvet-video` add the core dependency plus an appropriate native FFmpeg components package. `velvet-video` is available on [Maven Central](https://mvnrepository.com/artifact/com.github.zakgof/velvet-video?repo=jcenter)
 
 The choice for native package is:
 
@@ -44,8 +44,8 @@ The choice for native package is:
 ### gradle
 ````groovy
 dependencies {
-    compile 'com.github.zakgof:velvet-video:0.5.0'
-    compile 'com.github.zakgof:velvet-video-natives:0.2.6.full'
+    compile 'com.github.zakgof:velvet-video:0.5.2'
+    compile 'com.github.zakgof:velvet-video-natives:0.2.8.full'
 }
 ````
 ### maven
@@ -53,13 +53,13 @@ dependencies {
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video</artifactId>
-  <version>0.5.0</version>
+  <version>0.5.2</version>
   <type>pom</type>
 </dependency>
 <dependency>
   <groupId>com.github.zakgof</groupId>
   <artifactId>velvet-video-natives</artifactId>
-  <version>0.2.6.full</version>
+  <version>0.2.8.full</version>
   <type>pom</type>
 </dependency>
 ````
