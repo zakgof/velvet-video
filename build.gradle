@@ -2,17 +2,20 @@ plugins {
     id 'java'
     id "io.freefair.lombok" version "4.1.4"
     
-    id "maven"
-    id "maven-publish"
-    id "com.jfrog.bintray" version "1.8.4"
+    id 'maven'
+    id 'maven-publish'
+    id 'signing'
     id 'com.adarshr.test-logger' version '1.6.0'
 }
+
+def ossrhUser = hasProperty('ossrhUsername') ? ossrhUsername : System.getenv('ossrhUsername')
+def ossrhPass = hasProperty('ossrhPassword') ? ossrhPassword : System.getenv('ossrhPassword')
 
 compileJava.options.encoding = 'UTF-8'
 
 group = 'com.github.zakgof'
 archivesBaseName = 'velvet-video'
-version = '0.5.1'
+version = '0.5.2'
 def github = 'https://github.com/zakgof/velvet-video'
 
 sourceCompatibility = 1.8
@@ -67,80 +70,79 @@ ext {
    descr = 'Java video encoding/decoding/muxing/demuxing library'
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.java
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
 }
 
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task testJar(type: Jar) {
+    classifier = 'tests'
+    from sourceSets.test.output
+}
+
+test {
+    exclude "**"
 }
 
 artifacts {
-    archives sourcesJar
-    archives javadocJar
+    archives javadocJar, sourcesJar, testJar
 }
 
-def pomConfig = {
-    scm {
-        connection 'scm:git:${github}.git'
-        developerConnection 'scm:git:${github}.git'
-        url github
-    }
-    licenses {
-        license {
+signing {
+    sign configurations.archives
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: ossrhUser, password: ossrhPass)
+      }
+
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: ossrhUser, password: ossrhPass)
+      }
+
+      pom.project {
+        packaging 'jar'
+        artifactId 'velvet-video'
+        url 'https://github.com/zakgof/velvet-video'
+        
+        name 'velvet-video'
+        description descr
+
+        scm {
+          connection 'scm:git:${github}.git'
+          developerConnection 'scm:git:${github}.git'
+          url github
+        }
+
+        licenses {
+          license {
             name 'The Apache License, Version 2.0'
             url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+          }
+          license {
+            name 'GNU General Public License v3.0'
+            url 'https://opensource.org/licenses/GPL-3.0'
+          }
         }
-        license {
-			name 'GNU General Public License v3.0'
-   			url 'https://opensource.org/licenses/GPL-3.0'
-        }
-    }
-    developers {
-        developer {
+
+        developers {
+          developer {
             id 'zakgof'
             name 'Oleksandr Zakusylo'
             email 'zakgof@gmail.com'
+          }
         }
+      }
     }
-}
-
-publishing {
-	publications {
-		MyPublication(MavenPublication) {
-			from components.java
-			artifact sourcesJar
-			artifact javadocJar
-  		    groupId group  		    
-            artifactId archivesBaseName
-            version project.version
-            pom.withXml {
-                def root = asNode()
-                root.appendNode('description', project.descr)
-                root.appendNode('name', project.archivesBaseName)
-                root.appendNode('url', github + '.git')
-                root.children().last() + pomConfig
-            }
-		}
-	}
-}
-
-bintray {
-    user = 'zakgof'
-    key = project.hasProperty('bintrayKey') ? bintrayKey : System.getenv('BINTRAY_KEY')
-    publications = ['MyPublication']
-    configurations = ['archives']
-    override = true
-    pkg {
-        repo = 'maven'
-        name = archivesBaseName
-        userOrg = 'zakgof'
-        licenses = ['Apache-2.0', 'GPL-3.0']
-        vcsUrl = github + '.git'
-        version {
-            name = project.version
-        }
-    }
+  }
 }
