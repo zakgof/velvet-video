@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import com.zakgof.velvetvideo.VelvetVideoException;
 
 import jnr.ffi.LibraryLoader;
+import jnr.ffi.LibraryOption;
 import jnr.ffi.Platform;
 import jnr.ffi.Pointer;
 import jnr.ffi.Runtime;
@@ -91,7 +92,10 @@ public class JNRHelper {
             if (!new File(libPath).isAbsolute()) {
             	extractNatives();
             }
-            L lib = LibraryLoader.create(clazz).failImmediately().search(extractionDir.toString()).load(libShortName);
+            L lib = LibraryLoader.create(clazz).failImmediately()
+                .option(LibraryOption.PreferCustomPaths, true)
+                .search(extractionDir.toString())
+                .load(libShortName);
             LOG.atDebug().addArgument(libfile).log("Loaded {}");
 			return lib;
         } catch(UnsatisfiedLinkError e) {
